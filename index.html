@@ -129,9 +129,22 @@ const s=ct.stops;if(s.length===1){window.open(s[0].map_url||`https://www.google.
 const o=encodeURIComponent(s[0].name),d=encodeURIComponent(s[s.length-1].name),wp=s.slice(1,-1).map(x=>encodeURIComponent(x.name)).join('|');
 let u=`https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`;if(wp)u+=`&waypoints=${wp}`;u+='&travelmode=transit';window.open(u,'_blank')}
 
+function parseMediaUrl(u){
+if(!u)return{type:'link',url:u};
+const gd=u.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
+if(gd)return{type:'gdrive',url:`https://drive.google.com/file/d/${gd[1]}/preview`};
+if(/drive\.google\.com.*\/preview/.test(u))return{type:'gdrive',url:u};
+if(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u))return{type:'img',url:u};
+if(/\.(pdf)(\?.*)?$/i.test(u))return{type:'pdf',url:u};
+if(/i\.imgur\.com/i.test(u))return{type:'img',url:u};
+if(/i\.postimg\.cc/i.test(u))return{type:'img',url:u};
+if(/i\.ibb\.co/i.test(u))return{type:'img',url:u};
+if(/res\.cloudinary\.com/i.test(u))return{type:'img',url:u};
+if(/instagram\.com\/(p|reel)\//i.test(u)){let iu=u.includes('?')?u.split('?')[0]:u;if(!iu.endsWith('/'))iu+='/';return{type:'ig',url:iu}}
+return{type:'link',url:u}}
+
 function rCr(){let creds=[];try{creds=typeof ct.creds==='string'?JSON.parse(ct.creds):(ct.creds||[])}catch(e){}
 const el=document.getElementById('cArea');if(!ct){el.innerHTML='';return}
-const isMedia=u=>/\.(jpg|jpeg|png|gif|webp|pdf)(\?.*)?$/i.test(u);
 el.innerHTML=`<div class="cs"><div class="cti">📎 憑證</div>
 ${creds.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${creds.map((c,i)=>`<span style="padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;border:.5px solid var(--bg3);background:var(--bg);transition:all .15s" onclick="showCred(${i})" id="credTab${i}">${c.label||'憑證'+(i+1)}</span>`).join('')}</div>
 <div id="credPreview"></div>
@@ -140,11 +153,10 @@ ${creds.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8p
 if(creds.length)showCred(0)}
 function showCred(i){let creds=ct.creds||[];const c=creds[i];if(!c)return;
 document.querySelectorAll('[id^=credTab]').forEach((t,j)=>{t.style.background=j===i?'var(--blue-bg)':'var(--bg)';t.style.borderColor=j===i?'var(--blue)':'var(--bg3)';t.style.color=j===i?'var(--blue-dk)':'var(--text2)'});
-const el=document.getElementById('credPreview');const u=c.url;
-const isPdf=/\.pdf(\?.*)?$/i.test(u);const isImg=/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u);
-if(isImg)el.innerHTML=`<img src="${u}" style="width:100%;border-radius:6px;max-height:400px;object-fit:contain">`;
-else if(isPdf)el.innerHTML=`<iframe src="${u}" style="width:100%;height:400px;border:none;border-radius:6px"></iframe>`;
-else el.innerHTML=`<a href="${u}" target="_blank" style="font-size:13px;color:var(--blue);word-break:break-all">📎 ${c.label||u}</a>`}
+const el=document.getElementById('credPreview');const m=parseMediaUrl(c.url);
+if(m.type==='img')el.innerHTML=`<img src="${m.url}" style="width:100%;border-radius:6px;max-height:400px;object-fit:contain">`;
+else if(m.type==='pdf'||m.type==='gdrive')el.innerHTML=`<iframe src="${m.url}" style="width:100%;height:400px;border:none;border-radius:6px" allow="autoplay"></iframe>`;
+else el.innerHTML=`<a href="${m.url}" target="_blank" style="font-size:13px;color:var(--blue);word-break:break-all">📎 ${c.label||m.url}</a>`}
 async function dlCr(i){let c=[...(ct.creds||[])];c.splice(i,1);await sb.from('trips').update({creds:c}).eq('id',ct.id);ct.creds=c;rCr()}
 
 async function lFl(){const{data}=await sb.from('flights').select('*').eq('date',cd).order('sort_order');rFl(data||[])}
@@ -178,7 +190,7 @@ async function dPk(id){await sb.from('packing').delete().eq('id',id);lPk()}
 async function lPhPrj(){const{data}=await sb.from('photo_refs').select('project');pPrj=[...new Set((data||[]).map(d=>d.project).filter(Boolean))];if(!pPrj.length)pPrj=['預設企劃'];if(!cPrj)cPrj=pPrj[0];rPhT();lPh()}
 function rPhT(){document.getElementById('phTabs').innerHTML=pPrj.map(p=>`<div class="phb${p===cPrj?' a':''}" onclick="swPh('${p}')">${p}</div>`).join('')}
 function swPh(p){cPrj=p;rPhT();lPh()}
-async function lPh(){const{data}=await sb.from('photo_refs').select('*').eq('project',cPrj).order('sort_order');document.getElementById('phList').innerHTML=(data||[]).map(r=>{const isImg=r.ig_url&&/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(r.ig_url);const isIG=r.ig_url&&/instagram\.com/i.test(r.ig_url);return`<div class="phc"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:500">${r.location||r.content||''}</span><button class="ld" onclick="dPh(${r.id})">✕</button></div>${r.notes?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${r.notes}</div>`:''}${isIG?`<iframe src="${r.ig_url}embed/" loading="lazy"></iframe>`:''}${isImg?`<img src="${r.ig_url}" style="width:100%;border-radius:6px;margin-top:6px" loading="lazy">`:''}${!r.ig_url&&r.content?`<div style="font-size:12px;margin-top:6px;white-space:pre-wrap">${r.content}</div>`:''}</div>`}).join('')||'<div class="emp">尚未新增參考</div>'}
+async function lPh(){const{data}=await sb.from('photo_refs').select('*').eq('project',cPrj).order('sort_order');document.getElementById('phList').innerHTML=(data||[]).map(r=>{const m=r.ig_url?parseMediaUrl(r.ig_url):null;return`<div class="phc"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:500">${r.location||r.content||''}</span><button class="ld" onclick="dPh(${r.id})">✕</button></div>${r.notes?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${r.notes}</div>`:''}${m&&m.type==='ig'?`<iframe src="${m.url}embed/" loading="lazy" style="width:100%;border:none;border-radius:6px;min-height:320px;margin-top:6px"></iframe>`:''}${m&&m.type==='img'?`<img src="${m.url}" style="width:100%;border-radius:6px;margin-top:6px" loading="lazy">`:''}${m&&(m.type==='pdf'||m.type==='gdrive')?`<iframe src="${m.url}" style="width:100%;height:400px;border:none;border-radius:6px;margin-top:6px"></iframe>`:''}${!r.ig_url&&r.content?`<div style="font-size:12px;margin-top:6px;white-space:pre-wrap">${r.content}</div>`:''}</div>`}).join('')||'<div class="emp">尚未新增參考</div>'}
 async function dPh(id){await sb.from('photo_refs').delete().eq('id',id);lPh()}
 
 function tTool(n){const ids={expense:'pe',shopping:'ps',packing:'pp',currency:'pu',photo:'pf'};const tids={expense:'te',shopping:'ts',packing:'tp',currency:'tc',photo:'tf'};
@@ -214,7 +226,7 @@ if(eid)await sb.from('flights').update(o).eq('id',eid);else await sb.from('fligh
 function openPrjM(){openMo(`<h3>新增影片企劃</h3><div class="mf"><label>企劃名稱</label><input id="xpN" placeholder="例：東京街拍 Vlog"></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svPrj()">新增</button></div>`)}
 function svPrj(){const n=document.getElementById('xpN').value.trim();if(!n)return;pPrj.push(n);cPrj=n;rPhT();clM()}
 function openPhM(){openMo(`<h3>新增拍攝參考</h3><div class="mf"><label>媒體連結（選填）</label><input id="xrI" type="url" placeholder="IG 連結 或 圖片網址 (.jpg/.png)"><div style="font-size:10px;color:var(--text3);margin-top:3px">支援 Instagram 貼文連結、Imgur 等圖片網址</div></div><div class="mf"><label>文字描述</label><textarea id="xrC" placeholder="想拍的場景"></textarea></div><div class="mf"><label>拍攝地點</label><input id="xrL"></div><div class="mf"><label>備註</label><input id="xrN" placeholder="角度、光線等"></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svPh()">新增</button></div>`)}
-async function svPh(){const ig=document.getElementById('xrI').value.trim(),c=document.getElementById('xrC').value.trim(),l=document.getElementById('xrL').value.trim(),n=document.getElementById('xrN').value.trim();if(!ig&&!c){alert('請填入 IG 連結或文字描述');return}let iu='';if(ig){iu=ig.includes('?')?ig.split('?')[0]:ig;if(!iu.endsWith('/'))iu+='/'}await sb.from('photo_refs').insert({project:cPrj,ref_type:ig?'instagram':'text',content:c,ig_url:iu,location:l,notes:n});lPh();clM()}
+async function svPh(){const ig=document.getElementById('xrI').value.trim(),c=document.getElementById('xrC').value.trim(),l=document.getElementById('xrL').value.trim(),n=document.getElementById('xrN').value.trim();if(!ig&&!c){alert('請填入連結或文字描述');return}await sb.from('photo_refs').insert({project:cPrj,ref_type:ig?'media':'text',content:c,ig_url:ig||null,location:l,notes:n});lPh();clM()}
 
 function sRT(){sb.channel('all').on('postgres_changes',{event:'*',schema:'public',table:'trips'},()=>lTrip()).on('postgres_changes',{event:'*',schema:'public',table:'flights'},()=>lFl()).on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>lExp()).on('postgres_changes',{event:'*',schema:'public',table:'shopping'},()=>{if(cTl==='shopping')lSh()}).on('postgres_changes',{event:'*',schema:'public',table:'packing'},()=>{if(cTl==='packing')lPk()}).on('postgres_changes',{event:'*',schema:'public',table:'photo_refs'},()=>{if(cTl==='photo')lPh()}).on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>lSt()).subscribe()}
 init();
