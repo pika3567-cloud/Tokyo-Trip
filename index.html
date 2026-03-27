@@ -58,7 +58,7 @@
 <div class="ti" onclick="tTool('photo')" id="tf"><span style="font-size:17px">📸</span><span>拍攝</span></div>
 </div>
 <div class="pn" id="pe"><div class="ph">💰 記帳<button class="pcl" onclick="tTool('expense')">✕</button></div><div class="fmr"><select id="eCat"><option>🚃 交通</option><option>🍜 餐飲</option><option>🛍️ 購物</option><option>🎫 門票</option><option>🔧 其他</option></select><input id="eIt" placeholder="品項"><input id="eAm" type="number" placeholder="¥ 金額" style="width:85px"><button class="ba" style="background:var(--green)" onclick="aExp()">加入</button></div><div id="eList" style="max-height:200px;overflow-y:auto"></div><div class="et"><span>今日合計</span><span id="eTot">¥ 0</span></div><div class="cht"><button class="chb a" onclick="sChart('pie',this)">🥧 類別佔比</button><button class="chb" onclick="sChart('bar',this)">📊 每日花費</button></div><div class="chx"><canvas id="eCv"></canvas></div></div>
-<div class="pn" id="ps"><div class="ph">🛒 待購清單<button class="pcl" onclick="tTool('shopping')">✕</button></div><div class="fmr"><input id="sIt" placeholder="品名"><input id="sLo" placeholder="地點" style="width:70px"><input id="sBg" type="number" placeholder="¥ 預算" style="width:75px"><button class="ba" style="background:var(--coral)" onclick="aSh()">加入</button></div><div id="shList"></div></div>
+<div class="pn" id="ps"><div class="ph">🛒 待購清單<button class="pcl" onclick="tTool('shopping')">✕</button></div><div class="fmr"><input id="sIt" placeholder="品名"><input id="sLo" placeholder="地點" style="width:80px"><button class="ba" style="background:var(--coral)" onclick="aSh()">加入</button></div><div id="shList"></div></div>
 <div class="pn" id="pp"><div class="ph">🧳 行李清單<button class="pcl" onclick="tTool('packing')">✕</button></div><div class="pkt"><div class="pkb a" id="pk0" onclick="sPk(0,this)">旅伴A</div><div class="pkb" id="pk1" onclick="sPk(1,this)">旅伴B</div></div><div class="fmr"><select id="pCat"><option>👕 衣物</option><option>📱 電子</option><option>🧴 盥洗</option><option>💊 藥品</option><option>📄 證件</option><option>📦 其他</option></select><input id="pIt" placeholder="物品" style="flex:1"><button class="ba" style="background:var(--purple)" onclick="aPk()">加入</button></div><div id="pkList"></div></div>
 <div class="pn" id="pu"><div class="ph">💱 匯率試算<button class="pcl" onclick="tTool('currency')">✕</button></div><div class="cc"><div class="cg"><label id="cfL">TWD 台幣</label><input type="number" id="cfV" placeholder="0" oninput="cCalc()" class="mono"></div><button class="csw" onclick="cSwap()">⇅</button><div class="cg"><label id="ctL">JPY 日圓</label><input type="number" id="ctV" placeholder="0" readonly class="mono"></div><div class="crt" id="cR">載入匯率中...</div><div class="cq"><button onclick="qC(100)">¥100</button><button onclick="qC(500)">¥500</button><button onclick="qC(1000)">¥1000</button><button onclick="qC(5000)">¥5000</button><button onclick="qC(10000)">¥10000</button></div></div></div>
 <div class="pn" id="pf"><div class="ph">📸 拍攝參考<button class="pcl" onclick="tTool('photo')">✕</button></div><div class="pht" id="phTabs"></div><div style="margin-bottom:10px"><button onclick="openPrjM()" style="padding:5px 12px;border-radius:16px;border:1px dashed var(--bg3);background:transparent;color:var(--text3);font-size:11px;cursor:pointer">＋ 新增企劃</button></div><div id="phList"></div><button onclick="openPhM()" style="width:100%;padding:9px;margin-top:6px;border-radius:var(--rs);border:1px dashed var(--bg3);background:transparent;color:var(--text3);font-size:12px;cursor:pointer">＋ 新增參考</button></div>
@@ -103,9 +103,10 @@ document.getElementById('dInfo').innerHTML=`<div class="ig"><div class="ic"><div
 rTr();rSt();rCr()}
 async function delTrip(){if(!confirm('確定刪除今天行程？'))return;await sb.from('trips').delete().eq('id',ct.id);lTrip()}
 
-function rTr(){const sel=ct.transport?ct.transport.split(',').map(s=>s.trim()):[];document.getElementById('tRow').innerHTML=`<div class="tr">${TS.map(t=>`<span class="tt${sel.includes(t)?' a':''}" onclick="tTr('${t}')">${t}</span>`).join('')}<span class="tta" onclick="aTr()">＋</span></div>`}
+function rTr(){const sel=ct.transport?ct.transport.split(',').map(s=>s.trim()):[];document.getElementById('tRow').innerHTML=`<div class="tr">${TS.map(t=>`<span class="tt${sel.includes(t)?' a':''}" onclick="tTr('${t}')">${t}</span>`).join('')}${sel.filter(s=>!TS.includes(s)).map(t=>`<span class="tt a" onclick="tTr('${t}')">${t} <span onclick="event.stopPropagation();rmTr('${t}')" style="cursor:pointer;margin-left:2px">✕</span></span>`).join('')}<span class="tta" onclick="aTr()">＋</span></div>`}
 async function tTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.trim()):[];if(sel.includes(tag))sel=sel.filter(s=>s!==tag);else sel.push(tag);const v=sel.join(', ');await sb.from('trips').update({transport:v}).eq('id',ct.id);ct.transport=v;rTr()}
-function aTr(){const v=prompt('輸入交通方式：');if(!v)return;TS.push(v.trim());tTr(v.trim())}
+async function rmTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.trim()):[];sel=sel.filter(s=>s!==tag);const v=sel.join(', ');await sb.from('trips').update({transport:v}).eq('id',ct.id);ct.transport=v;rTr()}
+function aTr(){const v=prompt('輸入交通方式：');if(!v)return;tTr(v.trim())}
 
 function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.stops):(ct.stops||[])}catch(e){}
 document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
@@ -130,7 +131,20 @@ let u=`https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`;if(w
 
 function rCr(){let creds=[];try{creds=typeof ct.creds==='string'?JSON.parse(ct.creds):(ct.creds||[])}catch(e){}
 const el=document.getElementById('cArea');if(!ct){el.innerHTML='';return}
-el.innerHTML=`<div class="cs"><div class="cti">📎 憑證</div>${creds.map((c,i)=>`<div class="ci"><span>📎</span><a href="${c.url}" target="_blank">${c.label||c.url}</a><button class="cdl" onclick="dlCr(${i})">✕</button></div>`).join('')}<div class="ac" onclick="openCrM()">＋ 新增憑證</div></div>`}
+const isMedia=u=>/\.(jpg|jpeg|png|gif|webp|pdf)(\?.*)?$/i.test(u);
+el.innerHTML=`<div class="cs"><div class="cti">📎 憑證</div>
+${creds.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${creds.map((c,i)=>`<span style="padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;border:.5px solid var(--bg3);background:var(--bg);transition:all .15s" onclick="showCred(${i})" id="credTab${i}">${c.label||'憑證'+(i+1)}</span>`).join('')}</div>
+<div id="credPreview"></div>
+<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${creds.map((c,i)=>`<button class="cdl" onclick="dlCr(${i})" style="font-size:11px;padding:2px 8px;border-radius:10px;border:.5px solid var(--bg3);background:var(--bg)">🗑 ${c.label||'憑證'+(i+1)}</button>`).join('')}</div>`:''}
+<div class="ac" onclick="openCrM()">＋ 新增憑證</div></div>`;
+if(creds.length)showCred(0)}
+function showCred(i){let creds=ct.creds||[];const c=creds[i];if(!c)return;
+document.querySelectorAll('[id^=credTab]').forEach((t,j)=>{t.style.background=j===i?'var(--blue-bg)':'var(--bg)';t.style.borderColor=j===i?'var(--blue)':'var(--bg3)';t.style.color=j===i?'var(--blue-dk)':'var(--text2)'});
+const el=document.getElementById('credPreview');const u=c.url;
+const isPdf=/\.pdf(\?.*)?$/i.test(u);const isImg=/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u);
+if(isImg)el.innerHTML=`<img src="${u}" style="width:100%;border-radius:6px;max-height:400px;object-fit:contain">`;
+else if(isPdf)el.innerHTML=`<iframe src="${u}" style="width:100%;height:400px;border:none;border-radius:6px"></iframe>`;
+else el.innerHTML=`<a href="${u}" target="_blank" style="font-size:13px;color:var(--blue);word-break:break-all">📎 ${c.label||u}</a>`}
 async function dlCr(i){let c=[...(ct.creds||[])];c.splice(i,1);await sb.from('trips').update({creds:c}).eq('id',ct.id);ct.creds=c;rCr()}
 
 async function lFl(){const{data}=await sb.from('flights').select('*').eq('date',cd).order('sort_order');rFl(data||[])}
@@ -140,7 +154,7 @@ async function dlFl(id){if(!confirm('刪除此航班？'))return;await sb.from('
 
 async function lExp(){const{data}=await sb.from('expenses').select('*').eq('date',cd).order('created_at',{ascending:false});allE=data||[];rExp()}
 function rExp(){const tot=allE.reduce((s,e)=>s+(e.amount||0),0);document.getElementById('eTot').textContent=`¥ ${tot.toLocaleString()}`;
-document.getElementById('eList').innerHTML=allE.map(e=>`<div class="li"><span style="padding:2px 7px;border-radius:8px;font-size:11px;background:${CC[e.category]||'#999'}20;color:${CC[e.category]||'#999'}">${e.category}</span><span>${e.item||''}</span><span class="mono" style="margin-left:auto;font-weight:600;font-size:12px">¥${(e.amount||0).toLocaleString()}</span><button class="ld" onclick="dlEx(${e.id})">✕</button></div>`).join('');uChart()}
+document.getElementById('eList').innerHTML=allE.map(e=>`<div class="li"><span style="padding:2px 7px;border-radius:8px;font-size:11px;background:${CC[e.category]||'#999'}20;color:${CC[e.category]||'#999'};flex-shrink:0">${e.category}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.item||''}</span><span class="mono" style="flex-shrink:0;width:75px;text-align:right;font-weight:600;font-size:12px">¥${(e.amount||0).toLocaleString()}</span><button class="ld" onclick="dlEx(${e.id})" style="flex-shrink:0">✕</button></div>`).join('');uChart()}
 async function aExp(){const cat=document.getElementById('eCat').value,it=document.getElementById('eIt').value.trim(),am=parseFloat(document.getElementById('eAm').value)||0;if(!it&&!am)return;await sb.from('expenses').insert({date:cd,category:cat,item:it,amount:am,currency:'JPY'});document.getElementById('eIt').value='';document.getElementById('eAm').value='';lExp()}
 async function dlEx(id){await sb.from('expenses').delete().eq('id',id);lExp()}
 function sChart(t,b){chT=t;document.querySelectorAll('.chb').forEach(x=>x.classList.remove('a'));b.classList.add('a');uChart()}
@@ -149,8 +163,8 @@ if(chT==='pie'){const ct2={};allE.forEach(e=>{ct2[e.category]=(ct2[e.category]||
 }else{const{data}=await sb.from('expenses').select('*');const dl={};D.forEach(d=>dl[d.d]=0);(data||[]).forEach(e=>{if(dl[e.date]!==undefined)dl[e.date]+=(e.amount||0)});eCh=new Chart(ctx,{type:'bar',data:{labels:D.map(d=>d.s),datasets:[{label:'花費(¥)',data:D.map(d=>dl[d.d]),backgroundColor:'rgba(193,124,90,0.6)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}})}}
 
 async function lSh(){const{data}=await sb.from('shopping').select('*').order('sort_order');rSh(data||[])}
-function rSh(items){document.getElementById('shList').innerHTML=items.map(it=>`<div class="li${it.bought?' dn':''}"><input type="checkbox" ${it.bought?'checked':''} onchange="tSh(${it.id},this.checked)"><span style="flex:1">${it.item}</span>${it.location?`<span style="font-size:11px;color:var(--text3)">📍${it.location}</span>`:''}${it.budget?`<span class="mono" style="font-size:11px;color:var(--amber)">¥${it.budget.toLocaleString()}</span>`:''}<button class="ld" onclick="dSh(${it.id})">✕</button></div>`).join('')||'<div class="emp">尚未新增</div>'}
-async function aSh(){const it=document.getElementById('sIt').value.trim();if(!it)return;await sb.from('shopping').insert({item:it,location:document.getElementById('sLo').value.trim(),budget:parseFloat(document.getElementById('sBg').value)||0});document.getElementById('sIt').value='';document.getElementById('sLo').value='';document.getElementById('sBg').value='';lSh()}
+function rSh(items){document.getElementById('shList').innerHTML=items.map(it=>`<div class="li${it.bought?' dn':''}"><input type="checkbox" ${it.bought?'checked':''} onchange="tSh(${it.id},this.checked)"><span style="flex:1">${it.item}</span>${it.location?`<span style="font-size:11px;color:var(--text3)">📍${it.location}</span>`:''}<button class="ld" onclick="dSh(${it.id})">✕</button></div>`).join('')||'<div class="emp">尚未新增</div>'}
+async function aSh(){const it=document.getElementById('sIt').value.trim();if(!it)return;await sb.from('shopping').insert({item:it,location:document.getElementById('sLo').value.trim()});document.getElementById('sIt').value='';document.getElementById('sLo').value='';lSh()}
 async function tSh(id,b){await sb.from('shopping').update({bought:b}).eq('id',id);lSh()}
 async function dSh(id){await sb.from('shopping').delete().eq('id',id);lSh()}
 
@@ -188,7 +202,7 @@ async function svTrip(){const c=document.getElementById('xtC').value.trim(),d=do
 if(ct)await sb.from('trips').update({city:c,dest:d,itin:i,hotel:h,notes:n}).eq('id',ct.id);
 else await sb.from('trips').insert({date:cd,day:`第${idx+1}天`,city:c,dest:d,itin:i,hotel:h,notes:n,stops:[],creds:[],sort_order:idx});await lTrip();clM()}
 
-function openCrM(){openMo(`<h3>新增憑證</h3><div class="mf"><label>名稱</label><input id="xcL" placeholder="例：機票確認信"></div><div class="mf"><label>連結</label><input id="xcU" type="url" placeholder="https://..."></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svCr()">新增</button></div>`)}
+function openCrM(){openMo(`<h3>新增憑證</h3><div class="mf"><label>名稱</label><input id="xcL" placeholder="例：機票確認信、飯店訂房"></div><div class="mf"><label>連結</label><input id="xcU" type="url" placeholder="https://..."><div style="font-size:10px;color:var(--text3);margin-top:3px">支援圖片網址（.jpg/.png）、PDF 網址、或一般連結</div></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svCr()">新增</button></div>`)}
 async function svCr(){const l=document.getElementById('xcL').value.trim(),u=document.getElementById('xcU').value.trim();if(!u)return;let c=[...(ct.creds||[])];c.push({label:l||u,url:u});await sb.from('trips').update({creds:c}).eq('id',ct.id);ct.creds=c;rCr();clM()}
 
 async function openFlM(eid){let f={person:st.person_a,direction:'去程',airline:'',flight_no:'',dep_airport:'',dep_terminal:'',dep_time:'',arr_airport:'',arr_terminal:'',arr_time:''};if(eid){const{data}=await sb.from('flights').select('*').eq('id',eid).single();if(data)f=data}
