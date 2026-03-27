@@ -134,7 +134,7 @@ el.innerHTML=`<div class="cs"><div class="cti">📎 憑證</div>${creds.map((c,i
 async function dlCr(i){let c=[...(ct.creds||[])];c.splice(i,1);await sb.from('trips').update({creds:c}).eq('id',ct.id);ct.creds=c;rCr()}
 
 async function lFl(){const{data}=await sb.from('flights').select('*').eq('date',cd).order('sort_order');rFl(data||[])}
-function rFl(fl){const el=document.getElementById('fArea');if(!fl.length){el.innerHTML='';return}
+function rFl(fl){const el=document.getElementById('fArea');if(!fl.length){el.innerHTML=`<button class="afb" onclick="openFlM()">＋ 新增航班</button>`;return}
 el.innerHTML=fl.map(f=>`<div class="fc"><div class="fh"><span class="fp">${f.person||''}</span><span class="fd">${f.direction||'去程'}</span><div class="fa"><button onclick="edFl(${f.id})">✏️</button><button onclick="dlFl(${f.id})">🗑️</button></div></div><div class="fr"><div class="fpt"><div class="pc mono">${f.dep_airport||'???'}</div><div class="pd">${f.dep_terminal?'T'+f.dep_terminal:''}</div><div class="ptm mono">${f.dep_time||'--:--'}</div></div><div class="fm"><div class="fi">${f.airline||''} ${f.flight_no||''}</div><div class="fl"></div></div><div class="fpt"><div class="pc mono">${f.arr_airport||'???'}</div><div class="pd">${f.arr_terminal?'T'+f.arr_terminal:''}</div><div class="ptm mono">${f.arr_time||'--:--'}</div></div></div></div>`).join('')+`<button class="afb" onclick="openFlM()">＋ 新增航班</button>`}
 async function dlFl(id){if(!confirm('刪除此航班？'))return;await sb.from('flights').delete().eq('id',id);lFl()}
 
