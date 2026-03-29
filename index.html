@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <style>
 :root{--bg:#F7F5F0;--bg2:#EDEAE4;--bg3:#E2DED6;--card:#FFFFFF;--text:#3A3630;--text2:#6B6860;--text3:#9C9890;--green:#8BB97E;--green-bg:#D4E8D0;--green-dk:#3A5A32;--blue:#7AAEDC;--blue-bg:#E0EDF8;--blue-dk:#2A5080;--pink:#D4A0B0;--pink-bg:#F5E8ED;--pink-dk:#8A4A60;--amber:#C8A46C;--amber-bg:#F5EDD8;--amber-dk:#6A5430;--coral:#C17C5A;--coral-bg:#FAF0E8;--coral-dk:#6A3A20;--purple:#9A8ABE;--purple-bg:#EDE8F5;--purple-dk:#4A3A6A;--red:#C56060;--red-bg:#FAE8E8;--r:12px;--rs:8px;--shadow:0 1px 4px rgba(58,54,48,.06);--font:'Noto Sans TC',sans-serif;--mono:'JetBrains Mono',monospace}
 [data-theme="dark"]{--bg:#1C1B18;--bg2:#2A2824;--bg3:#3A3832;--card:#252420;--text:#E8E4DC;--text2:#9C9890;--text3:#6B6860;--green-bg:#1A2E18;--green-dk:#A0D090;--blue-bg:#142838;--blue-dk:#90C0E8;--pink-bg:#2A1820;--pink-dk:#E0B0C0;--amber-bg:#2A2418;--amber-dk:#E0C888;--coral-bg:#2A1C14;--coral-dk:#E0A080;--purple-bg:#201828;--purple-dk:#B8A8D8;--red-bg:#2A1818}
@@ -45,6 +47,7 @@
 <div class="mn">
 <div id="dHdr"></div><div id="dInfo"></div><div id="tRow"></div>
 <div class="st" id="sTitle" style="display:none">📍 當日行程地點</div>
+<div id="mapBox" style="display:none;height:220px;border-radius:10px;overflow:hidden;margin-bottom:8px;border:.5px solid var(--bg3)"></div>
 <div class="sl" id="sList"></div>
 <div class="as" id="aStop" onclick="openStopM()" style="display:none">＋ 新增地點</div>
 <a class="mr" id="mBtn" href="#" onclick="openMR(event)" style="display:none">🗺️ Google Maps 路線 ↗</a>
@@ -63,7 +66,7 @@
 <div class="pn" id="pp"><div class="ph">🧳 行李清單<button class="pcl" onclick="tTool('packing')">✕</button></div><div class="pkt"><div class="pkb a" id="pk0" onclick="sPk(0,this)">旅伴A</div><div class="pkb" id="pk1" onclick="sPk(1,this)">旅伴B</div></div><div class="fmr"><select id="pCat"><option>👕 衣物</option><option>📱 電子</option><option>🧴 盥洗</option><option>💊 藥品</option><option>📄 證件</option><option>📦 其他</option></select><input id="pIt" placeholder="物品" style="flex:1"><button class="ba" style="background:var(--purple)" onclick="aPk()">加入</button></div><div id="pkList"></div></div>
 <div class="pn" id="pu"><div class="ph">💱 匯率試算<button class="pcl" onclick="tTool('currency')">✕</button></div><div class="cc"><div class="cg"><label id="cfL">TWD 台幣</label><input type="number" id="cfV" placeholder="0" oninput="cCalc()" class="mono"></div><button class="csw" onclick="cSwap()">⇅</button><div class="cg"><label id="ctL">JPY 日圓</label><input type="number" id="ctV" placeholder="0" readonly class="mono"></div><div class="crt" id="cR">載入匯率中...</div><div class="cq"><button onclick="qC(100)">¥100</button><button onclick="qC(500)">¥500</button><button onclick="qC(1000)">¥1000</button><button onclick="qC(5000)">¥5000</button><button onclick="qC(10000)">¥10000</button></div></div></div>
 <div class="pn" id="pf"><div class="ph">📸 拍攝參考<button class="pcl" onclick="tTool('photo')">✕</button></div><div class="pht" id="phTabs"></div><div style="margin-bottom:10px"><button onclick="openPrjM()" style="padding:5px 12px;border-radius:16px;border:1px dashed var(--bg3);background:transparent;color:var(--text3);font-size:11px;cursor:pointer">＋ 新增企劃</button></div><div id="phList"></div><button onclick="openPhM()" style="width:100%;padding:9px;margin-top:6px;border-radius:var(--rs);border:1px dashed var(--bg3);background:transparent;color:var(--text3);font-size:12px;cursor:pointer">＋ 新增參考</button></div>
-<div class="pn" id="pd"><div class="ph">📋 排程<button class="pcl" onclick="tTool('candidates')">✕</button></div><div style="display:flex;gap:4px;margin-bottom:10px"><div class="pkb a" id="cdTab0" onclick="swCdTab(0,this)">📌 候選清單</div><div class="pkb" id="cdTab1" onclick="swCdTab(1,this)">💭 願望清單</div></div><div id="cdPane0"><div class="fmr"><input id="cdNm" placeholder="地點名稱（自動偵測區域）" style="flex:1"><button class="ba" style="background:var(--green)" onclick="aCd()">加入</button></div><div id="areaSel" style="display:none;margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">手動選區域：</div><div id="areaTags" style="display:flex;flex-wrap:wrap;gap:4px"></div></div><div style="font-size:11px;color:var(--text3);margin-bottom:6px">自動偵測區域 · 點區域標籤可修改 · 點地名開 Maps</div><div id="cdList"></div></div><div id="cdPane1" style="display:none"><div class="fmr"><input id="wshNm" placeholder="想做的事、想吃的東西..." style="flex:1"><button class="ba" style="background:var(--pink)" onclick="aWsh()">加入</button></div><div id="wshList"></div></div></div>
+<div class="pn" id="pd"><div class="ph">📋 排程<button class="pcl" onclick="tTool('candidates')">✕</button></div><div style="display:flex;gap:4px;margin-bottom:10px"><div class="pkb a" id="cdTab0" onclick="swCdTab(0,this)">📌 候選清單</div><div class="pkb" id="cdTab1" onclick="swCdTab(1,this)">💭 願望清單</div></div><div id="cdPane0"><div class="fmr"><input id="cdNm" placeholder="地點名稱" style="flex:1"><button onclick="toggleAreaAdd()" style="padding:8px;border-radius:var(--rs);border:.5px solid var(--bg3);background:var(--bg);cursor:pointer;font-size:12px" id="areaAddBtn">📍</button><button class="ba" style="background:var(--green)" onclick="aCd()">加入</button></div><div id="areaAddSel" style="display:none;margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">選擇區域：</div><div id="areaAddTags" style="display:flex;flex-wrap:wrap;gap:4px"></div></div><div style="font-size:11px;color:var(--text3);margin-bottom:6px">同區域自動分組 · 點區域標籤可修改 · 點地名開 Maps</div><div id="cdList"></div></div><div id="cdPane1" style="display:none"><div class="fmr"><input id="wshNm" placeholder="想做的事、想吃的東西..." style="flex:1"><button class="ba" style="background:var(--pink)" onclick="aWsh()">加入</button></div><div id="wshList"></div></div></div>
 </div>
 <div class="sbk" id="sBg" onclick="clS()"></div>
 <div class="sp" id="sPn"><div class="sti">⚙️ 設定<button class="pcl" onclick="clS()">✕</button></div><div class="sg"><div class="sgl">旅伴 A 名字</div><input class="sgi" id="snA" onchange="svN('person_a',this.value)"></div><div class="sg"><div class="sgl">旅伴 B 名字</div><input class="sgi" id="snB" onchange="svN('person_b',this.value)"></div><div class="sg"><div class="sgl">🔒 驚喜行程密碼（4/13-4/16）</div><div id="pwdArea"></div></div><div class="srw"><span>🌙 深色模式</span><div class="tgl" id="sTh" onclick="tTheme()"></div></div></div>
@@ -102,8 +105,8 @@ async function swD(d){
 if(SECRET_DATES.includes(d)&&st.secret_pwd&&!secretUnlocked){
 openMoCtr(`<h3 style="font-size:15px">🔒 驚喜行程</h3><div style="text-align:center;color:var(--text2);font-size:13px;margin-bottom:12px">請輸入密碼查看內容</div><div class="mf"><input type="password" id="xPwd" placeholder="輸入密碼" style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')chkPwd('${d}')"></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="chkPwd('${d}')">確認</button></div>`);
 setTimeout(()=>{const el=document.getElementById('xPwd');if(el)el.focus()},200);return}
-cd=d;rDates();await lDay();lW()}
-function chkPwd(d){const v=document.getElementById('xPwd').value;if(v===st.secret_pwd){secretUnlocked=true;clM();cd=d;rDates();lDay();lW()}else{alert('密碼錯誤！')}}
+cd=d;if(tripMap){tripMap.remove();tripMap=null;mapMarkers=[];mapLine=null}rDates();await lDay();lW()}
+function chkPwd(d){const v=document.getElementById('xPwd').value;if(v===st.secret_pwd){secretUnlocked=true;clM();cd=d;if(tripMap){tripMap.remove();tripMap=null;mapMarkers=[];mapLine=null}rDates();lDay();lW()}else{alert('密碼錯誤！')}}
 
 async function lW(){const el=document.getElementById('wBar');try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=35.6762&longitude=139.6503&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&timezone=Asia/Tokyo&start_date=${cd}&end_date=${cd}`);const d=await r.json();if(d.daily&&d.daily.time&&d.daily.time.length){const mx=d.daily.temperature_2m_max[0],mn=d.daily.temperature_2m_min[0],rn=d.daily.precipitation_probability_max[0],co=d.daily.weathercode[0];const ic=co===0?'☀️':co<=3?'⛅':co<=49?'🌫️':co<=69?'🌧️':co<=79?'🌨️':co<=99?'⛈️':'🌤️';el.innerHTML=`<span class="wi">${ic}</span><span class="wt">${mn}°~${mx}°C</span><span>降雨 ${rn}%</span>`}else el.innerHTML=`<span class="wi">📅</span><span>尚無天氣預報</span>`}catch(e){el.innerHTML=`<span class="wi">⚠️</span><span>天氣載入失敗</span>`}}
 
@@ -115,7 +118,7 @@ function qC(a){if(cDir!=='jpy_twd'){cDir='jpy_twd';document.getElementById('cfL'
 
 async function lDay(){await Promise.all([lTrip(),lFl(),lExp()])}
 async function lTrip(){const{data}=await sb.from('trips').select('*').eq('date',cd).order('sort_order');ct=data&&data.length?data[0]:null;rDay()}
-function rDay(){const idx=D.findIndex(d=>d.d===cd);if(!ct){['dHdr','dInfo','tRow'].forEach(id=>document.getElementById(id).innerHTML='');document.getElementById('sTitle').style.display='none';document.getElementById('sList').innerHTML='';document.getElementById('aStop').style.display='none';document.getElementById('mBtn').style.display='none';document.getElementById('cArea').innerHTML='';document.getElementById('noTrip').style.display='block';return}
+function rDay(){const idx=D.findIndex(d=>d.d===cd);if(!ct){['dHdr','dInfo','tRow'].forEach(id=>document.getElementById(id).innerHTML='');document.getElementById('sTitle').style.display='none';document.getElementById('sList').innerHTML='';document.getElementById('aStop').style.display='none';document.getElementById('mBtn').style.display='none';document.getElementById('mapBox').style.display='none';document.getElementById('cArea').innerHTML='';document.getElementById('noTrip').style.display='block';return}
 document.getElementById('noTrip').style.display='none';const t=ct;
 document.getElementById('dHdr').innerHTML=`<div class="dhd"><span class="dl">第${idx+1}天(${D[idx].w})</span><span class="ct">${t.city||D[idx].c}</span><div class="da"><button onclick="openTripM()" title="編輯">✏️</button><button onclick="delTrip()" title="刪除">🗑️</button></div></div>`;
 document.getElementById('dInfo').innerHTML=`<div class="ig"><div class="ic"><div class="il">🎯 目的地</div><div class="iv">${t.dest||'—'}</div></div><div class="ic"><div class="il">🏨 住宿</div><div class="iv">${t.hotel||'—'}</div></div><div class="ic"><div class="il">📝 行程</div><div class="iv">${t.itin||'—'}</div></div><div class="ic"><div class="il">📝 備註</div><div class="iv">${t.notes||'—'}</div></div></div>`;
@@ -129,12 +132,13 @@ function aTr(){const v=prompt('輸入交通方式：');if(!v)return;tTr(v.trim()
 
 function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.stops):(ct.stops||[])}catch(e){}
 document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
-if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';return}
-document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=s.map_url||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
+if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';document.getElementById('mapBox').style.display='none';return}
+document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=s.map_url&&s.map_url.startsWith('http')?s.map_url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
 return`<div class="sc" draggable="true" data-idx="${i}" ondragstart="dgS(event)" ondragover="dgO(event)" ondragleave="dgL(event)" ondrop="dgD(event)" ondragend="dgE(event)" onclick="tgS(this,event)">
 <div class="stp"><span style="font-size:14px;color:var(--text3);cursor:grab;flex-shrink:0;padding:0 2px" title="拖拉排序">⠿</span><div class="sn">${i+1}</div><div class="sb"><div class="stm mono">${s.time||''}</div><div class="snm"><a href="${mu}" target="_blank" onclick="event.stopPropagation()"><span class="pin" style="font-size:12px">📍</span>${s.name}</a></div>${s.desc?`<div class="sds">${s.desc}</div>`:''}</div><span class="smn">⋮</span></div>
 <div class="sex"><div class="sei">${s.note?`<div class="snt">${s.note}</div>`:'<div class="snt" style="color:var(--text3)">無備註</div>'}${s.map_url?`<a href="${s.map_url}" target="_blank" style="font-size:12px;color:var(--blue);display:block;margin-bottom:8px" onclick="event.stopPropagation()">🗺️ 自訂地圖連結</a>`:''}
-<div class="sbt">${i>0?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},-1)">⬆</button>`:''} ${i<stops.length-1?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},1)">⬇</button>`:''}<button class="sbtn" onclick="event.stopPropagation();edSt(${i})">✏️ 編輯</button><button class="sbtn" onclick="event.stopPropagation();mvDay(${i})">📅 換天</button><button class="sbtn x" onclick="event.stopPropagation();dlSt(${i})">🗑️ 刪除</button></div></div></div></div>`}).join('')}
+<div class="sbt">${i>0?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},-1)">⬆</button>`:''} ${i<stops.length-1?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},1)">⬇</button>`:''}<button class="sbtn" onclick="event.stopPropagation();edSt(${i})">✏️ 編輯</button><button class="sbtn" onclick="event.stopPropagation();mvDay(${i})">📅 換天</button><button class="sbtn x" onclick="event.stopPropagation();dlSt(${i})">🗑️ 刪除</button></div></div></div></div>`}).join('');
+renderMap()}
 function tgS(el,e){if(e.target.closest('a')||e.target.closest('.sbtn'))return;el.classList.toggle('op')}
 
 function dgS(e){dgI=+e.currentTarget.dataset.idx;e.currentTarget.classList.add('dg');e.dataTransfer.effectAllowed='move'}
@@ -224,10 +228,17 @@ function openMo(h){document.getElementById('mCt').innerHTML=h;document.getElemen
 function clMo(e){if(e&&e.target!==document.getElementById('mOv'))return;const ov=document.getElementById('mOv');ov.classList.remove('a','ctr')}
 function clM(){const ov=document.getElementById('mOv');ov.classList.remove('a','ctr')}
 
-function openStopM(ei){const isE=ei!==undefined;const s=isE?ct.stops[ei]:{time:'',name:'',desc:'',note:'',map_url:''};
-openMo(`<h3>${isE?'編輯地點':'新增地點'}</h3><div class="mf"><label>時間</label><input type="time" id="xsT" value="${s.time||''}"></div><div class="mf"><label>地點名稱</label><input id="xsN" value="${s.name||''}" placeholder="例：淺草寺"></div><div class="mf"><label>簡述（卡片外顯）</label><input id="xsD" value="${s.desc||''}" placeholder="例：賞櫻花"></div><div class="mf"><label>備註（展開後顯示）</label><textarea id="xsNo" placeholder="詳細備註">${s.note||''}</textarea></div><div class="mf"><label>自訂 Google Maps 連結（選填）</label><input id="xsM" value="${s.map_url||''}" placeholder="留空則自動產生"></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svSt(${isE?ei:-1})">${isE?'儲存':'新增'}</button></div>`)}
+function openStopM(ei){const isE=ei!==undefined;const s=isE?ct.stops[ei]:{time:'',name:'',desc:'',note:'',map_url:'',lat:null,lng:null};
+openMo(`<h3>${isE?'編輯地點':'新增地點'}</h3><div class="mf"><label>時間</label><input type="time" id="xsT" value="${s.time||''}"></div><div class="mf"><label>地點名稱</label><input id="xsN" value="${s.name||''}" placeholder="例：淺草寺"></div><div class="mf"><label>簡述（卡片外顯）</label><input id="xsD" value="${s.desc||''}" placeholder="例：賞櫻花"></div><div class="mf"><label>備註（展開後顯示）</label><textarea id="xsNo" placeholder="詳細備註">${s.note||''}</textarea></div><div class="mf"><label>Google Maps 連結 或 地址（選填，用於地圖定位）</label><input id="xsM" value="${s.map_url||''}" placeholder="貼 Google Maps 連結或輸入地址"><div style="font-size:10px;color:var(--text3);margin-top:3px">留空則自動用地點名稱定位</div></div>${s.lat?`<div style="font-size:10px;color:var(--text3)">📍 座標：${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>`:''}<div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svSt(${isE?ei:-1})">${isE?'儲存':'新增'}</button></div>`)}
 function edSt(i){openStopM(i)}
-async function svSt(ei){const t=document.getElementById('xsT').value,n=document.getElementById('xsN').value.trim(),d=document.getElementById('xsD').value.trim(),no=document.getElementById('xsNo').value.trim(),m=document.getElementById('xsM').value.trim();if(!n){alert('請輸入地點名稱');return}let s=[...(ct.stops||[])];if(ei>=0)s[ei]={...s[ei],time:t,name:n,desc:d,note:no,map_url:m};else s.push({time:t,name:n,desc:d,note:no,map_url:m});await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
+async function svSt(ei){const t=document.getElementById('xsT').value,n=document.getElementById('xsN').value.trim(),d=document.getElementById('xsD').value.trim(),no=document.getElementById('xsNo').value.trim(),m=document.getElementById('xsM').value.trim();if(!n){alert('請輸入地點名稱');return}
+let lat=null,lng=null;const old=ei>=0?ct.stops[ei]:{};
+const coords=parseGMapsCoords(m);
+if(coords){lat=coords.lat;lng=coords.lng}
+else if(old.lat){lat=old.lat;lng=old.lng}
+let s=[...(ct.stops||[])];if(ei>=0)s[ei]={...s[ei],time:t,name:n,desc:d,note:no,map_url:m,lat,lng};else s.push({time:t,name:n,desc:d,note:no,map_url:m,lat,lng});
+await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM();
+if(!lat){geocodeStop(s.length-1>=0?ei>=0?ei:s.length-1:0,n,m)}}
 
 function openTripM(){const idx=D.findIndex(d=>d.d===cd);const t=ct||{};
 openMo(`<h3>${ct?'編輯行程':'新增行程'}</h3><div class="mf"><label>城市</label><input id="xtC" value="${t.city||D[idx].c}"></div><div class="mf"><label>目的地</label><input id="xtD" value="${t.dest||''}" placeholder="例：淺草、上野"></div><div class="mf"><label>行程描述</label><textarea id="xtI" placeholder="今天的安排">${t.itin||''}</textarea></div><div class="mf"><label>住宿</label><input id="xtH" value="${t.hotel||''}"></div><div class="mf"><label>備註</label><textarea id="xtN">${t.notes||''}</textarea></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svTrip()">儲存</button></div>`)}
@@ -251,28 +262,24 @@ async function svPh(){const ig=document.getElementById('xrI').value.trim(),c=doc
 
 // Candidates & Wishlist
 const DEF_AREAS=['新宿區','渋谷區','台東區','中央區','豐島區','千代田區','港區','江東區','墨田區','世田谷區','目黑區','文京區','品川區','杉並區','中野區','北區','荒川區','練馬區'];
-let customAreas=[],cdAll=[],cdTabIdx=0;
+let customAreas=[],cdAll=[],cdTabIdx=0,selAr='';
 function loadCustomAreas(){try{customAreas=JSON.parse(localStorage.getItem('customAreas')||'[]')}catch(e){customAreas=[]}}
 function saveCustomAreas(){localStorage.setItem('customAreas',JSON.stringify(customAreas))}
 function getAllAreas(){return[...DEF_AREAS,...customAreas]}
 function swCdTab(i,el){cdTabIdx=i;document.querySelectorAll('#pd .pkb').forEach(t=>t.classList.remove('a'));el.classList.add('a');document.getElementById('cdPane0').style.display=i===0?'block':'none';document.getElementById('cdPane1').style.display=i===1?'block':'none';if(i===0)lCd();if(i===1)lWsh()}
-function rAreaTags(){const el=document.getElementById('areaTags');if(!el)return;
-el.innerHTML=DEF_AREAS.map(a=>`<span class="tt" onclick="pickArea('${a}',this)">${a}</span>`).join('')+customAreas.map(a=>`<span class="tt" onclick="pickArea('${a}',this)">${a} <span onclick="event.stopPropagation();rmCustomArea('${a}')" style="cursor:pointer;font-size:10px">✕</span></span>`).join('')+`<span class="tta" onclick="addCustomArea()">＋ 自訂</span>`}
-let pickAreaCb=null;
-function pickArea(a,el){if(pickAreaCb){pickAreaCb(a);document.getElementById('areaSel').style.display='none';pickAreaCb=null}}
-function addCustomArea(){const v=prompt('輸入區域名稱：');if(!v)return;const a=v.trim();if(!customAreas.includes(a)){customAreas.push(a);saveCustomAreas();rAreaTags()}if(pickAreaCb){pickAreaCb(a);document.getElementById('areaSel').style.display='none';pickAreaCb=null}}
-function rmCustomArea(a){customAreas=customAreas.filter(x=>x!==a);saveCustomAreas();rAreaTags()}
-function showAreaPicker(cb){pickAreaCb=cb;rAreaTags();document.getElementById('areaSel').style.display='block'}
 
-function normArea(s){return s.replace(/区/g,'區').replace(/澀/g,'渋').replace(/豐/g,'豊').replace(/黑/g,'黒').replace(/島/g,'島').replace(/練/g,'練').replace(/雜/g,'雑').replace(/橋/g,'橋').replace(/邊/g,'辺').replace(/澤/g,'沢').replace(/關/g,'関').replace(/鄰/g,'隣').replace(/藝/g,'芸').replace(/區$/,'區').trim()}
-async function autoDetectArea(name){
-try{const q=encodeURIComponent(name+' 東京');const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=1&accept-language=ja`);const d=await r.json();
-if(d&&d.length&&d[0].address){const addr=d[0].address;
-let ward=addr.city_district||addr.suburb||'';
-ward=normArea(ward);
-if(!ward&&addr.city)ward=normArea(addr.city);
-if(ward){const all=getAllAreas();const match=all.find(a=>normArea(a)===normArea(ward)||normArea(ward).includes(normArea(a))||normArea(a).includes(normArea(ward)));
-if(match)return match;return ward}}return null}catch(e){return null}}
+function toggleAreaAdd(){const el=document.getElementById('areaAddSel');const show=el.style.display==='none';el.style.display=show?'block':'none';if(show)rAreaAddTags()}
+function rAreaAddTags(){const el=document.getElementById('areaAddTags');if(!el)return;
+el.innerHTML=DEF_AREAS.map(a=>`<span class="tt${selAr===a?' a':''}" onclick="selAddArea('${a}',this)">${a}</span>`).join('')+customAreas.map(a=>`<span class="tt${selAr===a?' a':''}" onclick="selAddArea('${a}',this)">${a} <span onclick="event.stopPropagation();rmCustomArea('${a}')" style="cursor:pointer;font-size:10px">✕</span></span>`).join('')+`<span class="tta" onclick="addCustomAreaForAdd()">＋ 自訂</span>`}
+function selAddArea(a,el){if(selAr===a){selAr='';document.getElementById('areaAddBtn').textContent='📍'}else{selAr=a;document.getElementById('areaAddBtn').textContent='📍'+a}rAreaAddTags()}
+function addCustomAreaForAdd(){const v=prompt('輸入區域名稱：');if(!v)return;const a=v.trim();if(!customAreas.includes(a)){customAreas.push(a);saveCustomAreas()}selAr=a;document.getElementById('areaAddBtn').textContent='📍'+a;rAreaAddTags()}
+function rmCustomArea(a){customAreas=customAreas.filter(x=>x!==a);saveCustomAreas();if(selAr===a){selAr='';document.getElementById('areaAddBtn').textContent='📍'}rAreaAddTags()}
+
+function showAreaPicker(cb){const areas=getAllAreas();
+const btns=DEF_AREAS.map(a=>`<span style="padding:5px 10px;border-radius:8px;border:.5px solid var(--bg3);background:var(--bg);font-size:12px;cursor:pointer" onclick="doPickArea(this,'${a}')">${a}</span>`).join('')+customAreas.map(a=>`<span style="padding:5px 10px;border-radius:8px;border:.5px solid var(--bg3);background:var(--bg);font-size:12px;cursor:pointer" onclick="doPickArea(this,'${a}')">${a}</span>`).join('')+`<span style="padding:5px 10px;border-radius:8px;border:1px dashed var(--bg3);background:transparent;font-size:12px;cursor:pointer" onclick="doPickAreaCustom()">＋ 自訂</span>`;
+window._areaPickCb=cb;openMoCtr(`<h3>選擇區域</h3><div style="display:flex;gap:4px;flex-wrap:wrap">${btns}</div>`)}
+function doPickArea(el,a){if(window._areaPickCb){window._areaPickCb(a);window._areaPickCb=null}clM()}
+function doPickAreaCustom(){const v=prompt('輸入區域名稱：');if(!v)return;const a=v.trim();if(!customAreas.includes(a)){customAreas.push(a);saveCustomAreas()}if(window._areaPickCb){window._areaPickCb(a);window._areaPickCb=null}clM()}
 
 async function lCd(){loadCustomAreas();const{data}=await sb.from('candidates').select('*').order('area,sort_order');cdAll=data||[];rCd()}
 function rCd(){const el=document.getElementById('cdList');if(!cdAll.length){el.innerHTML='<div class="emp">尚未新增候選地點</div>';return}
@@ -282,11 +289,9 @@ h+=items.map(c=>{const mu=c.map_url||`https://www.google.com/maps/search/?api=1&
 return`<div class="li" style="gap:5px"><a href="${mu}" target="_blank" style="flex:1;min-width:0;font-size:13px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:3px;overflow:hidden"><span style="font-size:11px;flex-shrink:0">📍</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span></a><button onclick="editCdArea(${c.id})" style="font-size:10px;color:var(--text3);background:var(--bg2);padding:2px 6px;border-radius:8px;flex-shrink:0;border:none;cursor:pointer;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.area||'選區域'}">${c.area||'📍'}</button><button onclick="assignCd(${c.id},'${c.name.replace(/'/g,"\\'")}')" style="font-size:10px;padding:3px 6px;border-radius:6px;border:.5px solid var(--green);background:var(--green-bg);color:var(--green-dk);cursor:pointer;flex-shrink:0;white-space:nowrap">排入→</button><button class="ld" onclick="dlCd(${c.id})" style="flex-shrink:0">✕</button></div>`}).join('')}
 el.innerHTML=h}
 async function aCd(){const nm=document.getElementById('cdNm').value.trim();if(!nm)return;
-document.getElementById('cdNm').value='';
-const area=await autoDetectArea(nm);
-await sb.from('candidates').insert({name:nm,area:area||null});
-if(area&&!getAllAreas().some(a=>normArea(a)===normArea(area))){customAreas.push(area);saveCustomAreas()}
-lCd()}
+await sb.from('candidates').insert({name:nm,area:selAr||null});
+document.getElementById('cdNm').value='';selAr='';document.getElementById('areaAddBtn').textContent='📍';
+document.getElementById('areaAddSel').style.display='none';lCd()}
 async function dlCd(id){await sb.from('candidates').delete().eq('id',id);lCd()}
 function editCdArea(id){showAreaPicker(async(area)=>{await sb.from('candidates').update({area}).eq('id',id);lCd()})}
 
@@ -320,6 +325,42 @@ clM()}
 
 // Centered modal helper
 function openMoCtr(h){document.getElementById('mCt').innerHTML=h;const ov=document.getElementById('mOv');ov.classList.add('a','ctr')}
+
+// Map
+let tripMap=null,mapMarkers=[],mapLine=null;
+function parseGMapsCoords(url){if(!url)return null;
+let m=url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);if(m)return{lat:parseFloat(m[1]),lng:parseFloat(m[2])};
+m=url.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);if(m)return{lat:parseFloat(m[1]),lng:parseFloat(m[2])};
+m=url.match(/place\/[^\/]+\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);if(m)return{lat:parseFloat(m[1]),lng:parseFloat(m[2])};
+return null}
+
+async function geocodeStop(idx,name,mapUrl){
+const q=mapUrl&&!mapUrl.startsWith('http')?mapUrl:name+' 東京';
+try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);const d=await r.json();
+if(d&&d.length){let s=[...(ct.stops||[])];s[idx].lat=parseFloat(d[0].lat);s[idx].lng=parseFloat(d[0].lon);
+await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;renderMap()}}catch(e){}}
+
+function renderMap(){
+const stops=ct?ct.stops||[]:[];
+const pts=stops.filter(s=>s.lat&&s.lng);
+const box=document.getElementById('mapBox');
+if(!pts.length){box.style.display='none';return}
+box.style.display='block';
+if(!tripMap){tripMap=L.map('mapBox',{zoomControl:false,attributionControl:false});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(tripMap);
+L.control.zoom({position:'bottomright'}).addTo(tripMap)}
+mapMarkers.forEach(m=>tripMap.removeLayer(m));mapMarkers=[];
+if(mapLine){tripMap.removeLayer(mapLine);mapLine=null}
+const latlngs=[];
+stops.forEach((s,i)=>{if(!s.lat||!s.lng)return;
+const ll=[s.lat,s.lng];latlngs.push(ll);
+const icon=L.divIcon({className:'',html:`<div style="width:26px;height:26px;border-radius:50%;background:#8BB97E;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]});
+const mk=L.marker(ll,{icon}).addTo(tripMap);
+mk.bindPopup(`<b>${s.name}</b>${s.desc?'<br>'+s.desc:''}`);
+mapMarkers.push(mk)});
+if(latlngs.length>1){mapLine=L.polyline(latlngs,{color:'#8BB97E',weight:3,opacity:0.7,dashArray:'8 6'}).addTo(tripMap)}
+const bounds=L.latLngBounds(latlngs);tripMap.fitBounds(bounds,{padding:[30,30],maxZoom:15});
+setTimeout(()=>tripMap.invalidateSize(),100)}
 
 function sRT(){sb.channel('all').on('postgres_changes',{event:'*',schema:'public',table:'trips'},()=>lTrip()).on('postgres_changes',{event:'*',schema:'public',table:'flights'},()=>lFl()).on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>lExp()).on('postgres_changes',{event:'*',schema:'public',table:'shopping'},()=>{if(cTl==='shopping')lSh()}).on('postgres_changes',{event:'*',schema:'public',table:'packing'},()=>{if(cTl==='packing')lPk()}).on('postgres_changes',{event:'*',schema:'public',table:'photo_refs'},()=>{if(cTl==='photo')lPh()}).on('postgres_changes',{event:'*',schema:'public',table:'candidates'},()=>{if(cTl==='candidates')lCd()}).on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>lSt()).subscribe()}
 init();
