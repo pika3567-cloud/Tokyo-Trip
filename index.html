@@ -357,7 +357,7 @@ const box=document.getElementById('mapBox');
 if(!pts.length){box.style.display='none';return}
 box.style.display='block';
 if(!tripMap){tripMap=L.map('mapBox',{zoomControl:false,attributionControl:false});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(tripMap);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:''}).addTo(tripMap);
 L.control.zoom({position:'bottomright'}).addTo(tripMap)}
 mapMarkers.forEach(m=>tripMap.removeLayer(m));mapMarkers=[];
 if(mapLine){tripMap.removeLayer(mapLine);mapLine=null}
