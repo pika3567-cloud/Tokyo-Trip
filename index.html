@@ -264,7 +264,7 @@ function addCustomArea(){const v=prompt('輸入區域名稱：');if(!v)return;co
 function rmCustomArea(a){customAreas=customAreas.filter(x=>x!==a);saveCustomAreas();rAreaTags()}
 function showAreaPicker(cb){pickAreaCb=cb;rAreaTags();document.getElementById('areaSel').style.display='block'}
 
-function normArea(s){return s.replace(/区/g,'區').replace(/澀/g,'渋').replace(/豐/g,'豊').trim()}
+function normArea(s){return s.replace(/区/g,'區').replace(/澀/g,'渋').replace(/豐/g,'豊').replace(/黑/g,'黒').replace(/島/g,'島').replace(/練/g,'練').replace(/雜/g,'雑').replace(/橋/g,'橋').replace(/邊/g,'辺').replace(/澤/g,'沢').replace(/關/g,'関').replace(/鄰/g,'隣').replace(/藝/g,'芸').replace(/區$/,'區').trim()}
 async function autoDetectArea(name){
 try{const q=encodeURIComponent(name+' 東京');const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=1&accept-language=ja`);const d=await r.json();
 if(d&&d.length&&d[0].address){const addr=d[0].address;
