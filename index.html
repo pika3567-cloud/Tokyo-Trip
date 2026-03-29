@@ -133,10 +133,10 @@ function aTr(){const v=prompt('輸入交通方式：');if(!v)return;tTr(v.trim()
 function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.stops):(ct.stops||[])}catch(e){}
 document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
 if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';document.getElementById('mapBox').style.display='none';return}
-document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=s.map_url&&s.map_url.startsWith('http')?s.map_url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
+document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
 return`<div class="sc" draggable="true" data-idx="${i}" ondragstart="dgS(event)" ondragover="dgO(event)" ondragleave="dgL(event)" ondrop="dgD(event)" ondragend="dgE(event)" onclick="tgS(this,event)">
 <div class="stp"><span style="font-size:14px;color:var(--text3);cursor:grab;flex-shrink:0;padding:0 2px" title="拖拉排序">⠿</span><div class="sn">${i+1}</div><div class="sb"><div class="stm mono">${s.time||''}</div><div class="snm"><a href="${mu}" target="_blank" onclick="event.stopPropagation()"><span class="pin" style="font-size:12px">📍</span>${s.name}</a></div>${s.desc?`<div class="sds">${s.desc}</div>`:''}</div><span class="smn">⋮</span></div>
-<div class="sex"><div class="sei">${s.note?`<div class="snt">${s.note}</div>`:'<div class="snt" style="color:var(--text3)">無備註</div>'}${s.map_url?`<a href="${s.map_url}" target="_blank" style="font-size:12px;color:var(--blue);display:block;margin-bottom:8px" onclick="event.stopPropagation()">🗺️ 自訂地圖連結</a>`:''}
+<div class="sex"><div class="sei">${s.note?`<div class="snt">${s.note}</div>`:'<div class="snt" style="color:var(--text3)">無備註</div>'}${s.addr?`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">📍 ${s.addr}</div>`:''}
 <div class="sbt">${i>0?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},-1)">⬆</button>`:''} ${i<stops.length-1?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},1)">⬇</button>`:''}<button class="sbtn" onclick="event.stopPropagation();edSt(${i})">✏️ 編輯</button><button class="sbtn" onclick="event.stopPropagation();mvDay(${i})">📅 換天</button><button class="sbtn x" onclick="event.stopPropagation();dlSt(${i})">🗑️ 刪除</button></div></div></div></div>`}).join('');
 renderMap()}
 function tgS(el,e){if(e.target.closest('a')||e.target.closest('.sbtn'))return;const wasOpen=el.classList.contains('op');document.querySelectorAll('.sc.op').forEach(c=>c.classList.remove('op'));if(!wasOpen)el.classList.add('op')}
@@ -228,15 +228,13 @@ function openMo(h){document.getElementById('mCt').innerHTML=h;document.getElemen
 function clMo(e){if(e&&e.target!==document.getElementById('mOv'))return;const ov=document.getElementById('mOv');ov.classList.remove('a','ctr')}
 function clM(){const ov=document.getElementById('mOv');ov.classList.remove('a','ctr')}
 
-function openStopM(ei){const isE=ei!==undefined;const s=isE?ct.stops[ei]:{time:'',name:'',desc:'',note:'',map_url:'',lat:null,lng:null};
-openMo(`<h3>${isE?'編輯地點':'新增地點'}</h3><div class="mf"><label>時間</label><input type="time" id="xsT" value="${s.time||''}"></div><div class="mf"><label>地點名稱</label><input id="xsN" value="${s.name||''}" placeholder="例：淺草寺"></div><div class="mf"><label>簡述（卡片外顯）</label><input id="xsD" value="${s.desc||''}" placeholder="例：賞櫻花"></div><div class="mf"><label>備註（展開後顯示）</label><textarea id="xsNo" placeholder="詳細備註">${s.note||''}</textarea></div><div class="mf"><label>Google Maps 連結 或 地址（選填，用於地圖定位）</label><input id="xsM" value="${s.map_url||''}" placeholder="貼 Google Maps 連結或輸入地址"><div style="font-size:10px;color:var(--text3);margin-top:3px">留空則自動用地點名稱定位</div></div>${s.lat?`<div style="font-size:10px;color:var(--text3)">📍 座標：${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>`:''}<div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svSt(${isE?ei:-1})">${isE?'儲存':'新增'}</button></div>`)}
+function openStopM(ei){const isE=ei!==undefined;const s=isE?ct.stops[ei]:{time:'',name:'',desc:'',note:'',addr:'',lat:null,lng:null};
+openMo(`<h3>${isE?'編輯地點':'新增地點'}</h3><div class="mf"><label>時間</label><input type="time" id="xsT" value="${s.time||''}"></div><div class="mf"><label>地點名稱</label><input id="xsN" value="${s.name||''}" placeholder="例：淺草寺"></div><div class="mf"><label>簡述（卡片外顯）</label><input id="xsD" value="${s.desc||''}" placeholder="例：賞櫻花"></div><div class="mf"><label>備註（展開後顯示）</label><textarea id="xsNo" placeholder="詳細備註">${s.note||''}</textarea></div><div class="mf"><label>地址（選填，地圖定位不準時填寫）</label><input id="xsAddr" value="${s.addr||''}" placeholder="例：東京都渋谷区神宮前1-1"><div style="font-size:10px;color:var(--text3);margin-top:3px">留空則自動用地點名稱定位</div></div>${s.lat?`<div style="font-size:10px;color:var(--text3)">📍 已定位到座標</div>`:''}<div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svSt(${isE?ei:-1})">${isE?'儲存':'新增'}</button></div>`)}
 function edSt(i){openStopM(i)}
-async function svSt(ei){const t=document.getElementById('xsT').value,n=document.getElementById('xsN').value.trim(),d=document.getElementById('xsD').value.trim(),no=document.getElementById('xsNo').value.trim(),m=document.getElementById('xsM').value.trim();if(!n){alert('請輸入地點名稱');return}
+async function svSt(ei){const t=document.getElementById('xsT').value,n=document.getElementById('xsN').value.trim(),d=document.getElementById('xsD').value.trim(),no=document.getElementById('xsNo').value.trim(),addr=document.getElementById('xsAddr').value.trim();if(!n){alert('請輸入地點名稱');return}
 let lat=null,lng=null;const old=ei>=0?ct.stops[ei]:{};
-const coords=parseGMapsCoords(m);
-if(coords){lat=coords.lat;lng=coords.lng}
-else if(old.lat){lat=old.lat;lng=old.lng}
-let s=[...(ct.stops||[])];if(ei>=0)s[ei]={...s[ei],time:t,name:n,desc:d,note:no,map_url:m,lat,lng};else s.push({time:t,name:n,desc:d,note:no,map_url:m,lat,lng});
+if(old.lat&&!addr){lat=old.lat;lng=old.lng}
+let s=[...(ct.stops||[])];if(ei>=0)s[ei]={...s[ei],time:t,name:n,desc:d,note:no,addr,lat,lng};else s.push({time:t,name:n,desc:d,note:no,addr,lat,lng});
 await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
 
 function openTripM(){const idx=D.findIndex(d=>d.d===cd);const t=ct||{};
@@ -345,10 +343,14 @@ if(!stops.length){document.getElementById('mapBox').style.display='none';return}
 let needGeo=false;
 for(let i=0;i<stops.length;i++){
 if(!stops[i].lat&&stops[i].name){needGeo=true;
-const coords=parseGMapsCoords(stops[i].map_url);
-if(coords){stops[i].lat=coords.lat;stops[i].lng=coords.lng}
-else{try{const q=encodeURIComponent((stops[i].map_url&&!stops[i].map_url.startsWith('http')?stops[i].map_url:stops[i].name)+' 東京');
-const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);const d=await r.json();
+const queries=[stops[i].name+' 東京'];
+if(stops[i].addr)queries.unshift(stops[i].addr);
+let found=false;
+for(const q of queries){if(found)break;
+try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=jp`);const d=await r.json();
+if(d&&d.length){stops[i].lat=parseFloat(d[0].lat);stops[i].lng=parseFloat(d[0].lon);found=true}
+}catch(e){}}
+if(!found&&stops[i].addr){try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stops[i].addr+' japan')}&format=json&limit=1`);const d=await r.json();
 if(d&&d.length){stops[i].lat=parseFloat(d[0].lat);stops[i].lng=parseFloat(d[0].lon)}
 }catch(e){}}}}
 if(needGeo){ct.stops=stops;await sb.from('trips').update({stops}).eq('id',ct.id)}
