@@ -66,7 +66,7 @@
 <div class="pn" id="pd"><div class="ph">📋 排程<button class="pcl" onclick="tTool('candidates')">✕</button></div><div style="display:flex;gap:4px;margin-bottom:10px"><div class="pkb a" id="cdTab0" onclick="swCdTab(0,this)">📌 候選清單</div><div class="pkb" id="cdTab1" onclick="swCdTab(1,this)">💭 願望清單</div></div><div id="cdPane0"><div class="fmr"><input id="cdNm" placeholder="地點名稱（自動偵測區域）" style="flex:1"><button class="ba" style="background:var(--green)" onclick="aCd()">加入</button></div><div id="areaSel" style="display:none;margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">手動選區域：</div><div id="areaTags" style="display:flex;flex-wrap:wrap;gap:4px"></div></div><div style="font-size:11px;color:var(--text3);margin-bottom:6px">自動偵測區域 · 點區域標籤可修改 · 點地名開 Maps</div><div id="cdList"></div></div><div id="cdPane1" style="display:none"><div class="fmr"><input id="wshNm" placeholder="想做的事、想吃的東西..." style="flex:1"><button class="ba" style="background:var(--pink)" onclick="aWsh()">加入</button></div><div id="wshList"></div></div></div>
 </div>
 <div class="sbk" id="sBg" onclick="clS()"></div>
-<div class="sp" id="sPn"><div class="sti">⚙️ 設定<button class="pcl" onclick="clS()">✕</button></div><div class="sg"><div class="sgl">旅伴 A 名字</div><input class="sgi" id="snA" onchange="svN('person_a',this.value)"></div><div class="sg"><div class="sgl">旅伴 B 名字</div><input class="sgi" id="snB" onchange="svN('person_b',this.value)"></div><div class="sg"><div class="sgl">🔒 驚喜行程密碼（4/13-4/16）</div><input class="sgi" id="sPwd" type="text" placeholder="設定密碼" onchange="svN('secret_pwd',this.value)"><div style="font-size:10px;color:var(--text3);margin-top:3px">設定後，點 4/13-4/16 需要輸入此密碼才能看內容</div></div><div class="srw"><span>🌙 深色模式</span><div class="tgl" id="sTh" onclick="tTheme()"></div></div></div>
+<div class="sp" id="sPn"><div class="sti">⚙️ 設定<button class="pcl" onclick="clS()">✕</button></div><div class="sg"><div class="sgl">旅伴 A 名字</div><input class="sgi" id="snA" onchange="svN('person_a',this.value)"></div><div class="sg"><div class="sgl">旅伴 B 名字</div><input class="sgi" id="snB" onchange="svN('person_b',this.value)"></div><div class="sg"><div class="sgl">🔒 驚喜行程密碼（4/13-4/16）</div><div id="pwdArea"></div></div><div class="srw"><span>🌙 深色模式</span><div class="tgl" id="sTh" onclick="tTheme()"></div></div></div>
 <div class="mo" id="mOv" onclick="clMo(event)"><div class="ml" id="mCt" onclick="event.stopPropagation()"></div></div>
 <script>
 const SU='https://iiyxkrphjzjtocpawipv.supabase.co',SK='sb_publishable_c73CKrmp1VOjuqDX6OdRZg_Fm9rDK3F';
@@ -83,7 +83,16 @@ function aTheme(){const dk=localStorage.getItem('theme')==='dark';document.docum
 function tTheme(){const isDk=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',isDk?'':'dark');localStorage.setItem('theme',isDk?'light':'dark');document.getElementById('sTh').classList.toggle('on',!isDk)}
 function openS(){document.getElementById('sPn').classList.add('a');document.getElementById('sBg').classList.add('a')}
 function clS(){document.getElementById('sPn').classList.remove('a');document.getElementById('sBg').classList.remove('a')}
-async function lSt(){const{data}=await sb.from('settings').select('*');if(data)data.forEach(r=>{st[r.key]=r.value});document.getElementById('snA').value=st.person_a;document.getElementById('snB').value=st.person_b;document.getElementById('pk0').textContent=st.person_a;document.getElementById('pk1').textContent=st.person_b;const pwdEl=document.getElementById('sPwd');if(pwdEl)pwdEl.value=st.secret_pwd||''}
+async function lSt(){const{data}=await sb.from('settings').select('*');if(data)data.forEach(r=>{st[r.key]=r.value});document.getElementById('snA').value=st.person_a;document.getElementById('snB').value=st.person_b;document.getElementById('pk0').textContent=st.person_a;document.getElementById('pk1').textContent=st.person_b;rPwdArea()}
+let pwdUnlocked=false;
+function rPwdArea(){const el=document.getElementById('pwdArea');if(!el)return;
+if(!st.secret_pwd){el.innerHTML=`<input class="sgi" type="password" id="sPwdNew" placeholder="設定密碼"><button onclick="setPwd()" style="margin-top:6px;padding:6px 14px;border-radius:var(--rs);border:none;background:var(--green);color:#fff;font-size:12px;cursor:pointer">設定密碼</button><div style="font-size:10px;color:var(--text3);margin-top:3px">設定後，點 4/13-4/16 需要輸入此密碼才能看內容</div>`}
+else if(!pwdUnlocked){el.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;letter-spacing:3px">••••••</span><button onclick="unlockPwd()" style="padding:4px 10px;border-radius:var(--rs);border:.5px solid var(--bg3);background:var(--bg);color:var(--text2);font-size:12px;cursor:pointer">🔓 修改密碼</button></div><div style="font-size:10px;color:var(--text3);margin-top:3px">已設定密碼，點修改需先驗證</div>`}
+else{el.innerHTML=`<input class="sgi" type="text" id="sPwdEdit" value="${st.secret_pwd}"><div style="display:flex;gap:6px;margin-top:6px"><button onclick="savePwdEdit()" style="padding:6px 14px;border-radius:var(--rs);border:none;background:var(--green);color:#fff;font-size:12px;cursor:pointer">儲存</button><button onclick="delPwd()" style="padding:6px 14px;border-radius:var(--rs);border:.5px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;cursor:pointer">刪除密碼</button></div>`}}
+async function setPwd(){const v=document.getElementById('sPwdNew').value.trim();if(!v){alert('請輸入密碼');return}await svN('secret_pwd',v);rPwdArea()}
+function unlockPwd(){const v=prompt('請輸入現有密碼：');if(v===st.secret_pwd){pwdUnlocked=true;rPwdArea()}else if(v!==null){alert('密碼錯誤！')}}
+async function savePwdEdit(){const v=document.getElementById('sPwdEdit').value.trim();if(!v){alert('密碼不能為空');return}await svN('secret_pwd',v);pwdUnlocked=false;rPwdArea()}
+async function delPwd(){if(!confirm('確定刪除密碼？4/13-4/16 將不再需要密碼'))return;await svN('secret_pwd','');pwdUnlocked=false;rPwdArea()}
 async function svN(k,v){st[k]=v;await sb.from('settings').upsert({key:k,value:v},{onConflict:'key'});document.getElementById('pk0').textContent=st.person_a;document.getElementById('pk1').textContent=st.person_b}
 
 function rDates(){const c=document.getElementById('dTabs');c.innerHTML=D.map(d=>`<div class="dtb${d.d===cd?' a':''}" onclick="swD('${d.d}')"><div class="dn">${d.n}</div><div class="ds">${d.s} ${d.w}</div><div class="dc">${d.c}</div></div>`).join('');setTimeout(()=>{const a=c.querySelector('.a');if(a)a.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})},80)}
@@ -241,7 +250,7 @@ function openPhM(){openMo(`<h3>新增拍攝參考</h3><div class="mf"><label>媒
 async function svPh(){const ig=document.getElementById('xrI').value.trim(),c=document.getElementById('xrC').value.trim(),l=document.getElementById('xrL').value.trim(),n=document.getElementById('xrN').value.trim();if(!ig&&!c){alert('請填入連結或文字描述');return}await sb.from('photo_refs').insert({project:cPrj,ref_type:ig?'media':'text',content:c,ig_url:ig||null,location:l,notes:n});lPh();clM()}
 
 // Candidates & Wishlist
-const DEF_AREAS=['新宿區','澀谷區','台東區','中央區','台東區','渋谷區','豐島區','千代田區','港區','江東區','墨田區','世田谷區','目黑區','武藏野市','文京區','品川區'];
+const DEF_AREAS=['新宿區','渋谷區','台東區','中央區','豐島區','千代田區','港區','江東區','墨田區','世田谷區','目黑區','文京區','品川區','杉並區','中野區','北區','荒川區','練馬區'];
 let customAreas=[],cdAll=[],cdTabIdx=0;
 function loadCustomAreas(){try{customAreas=JSON.parse(localStorage.getItem('customAreas')||'[]')}catch(e){customAreas=[]}}
 function saveCustomAreas(){localStorage.setItem('customAreas',JSON.stringify(customAreas))}
@@ -255,13 +264,14 @@ function addCustomArea(){const v=prompt('輸入區域名稱：');if(!v)return;co
 function rmCustomArea(a){customAreas=customAreas.filter(x=>x!==a);saveCustomAreas();rAreaTags()}
 function showAreaPicker(cb){pickAreaCb=cb;rAreaTags();document.getElementById('areaSel').style.display='block'}
 
+function normArea(s){return s.replace(/区/g,'區').replace(/澀/g,'渋').replace(/豐/g,'豊').trim()}
 async function autoDetectArea(name){
 try{const q=encodeURIComponent(name+' 東京');const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=1&accept-language=ja`);const d=await r.json();
 if(d&&d.length&&d[0].address){const addr=d[0].address;
 let ward=addr.city_district||addr.suburb||'';
-if(ward&&ward.endsWith('区'))ward=ward.replace('区','區');
-if(!ward&&addr.city)ward=addr.city;
-if(ward){const all=getAllAreas();const match=all.find(a=>ward.includes(a)||a.includes(ward));
+ward=normArea(ward);
+if(!ward&&addr.city)ward=normArea(addr.city);
+if(ward){const all=getAllAreas();const match=all.find(a=>normArea(a)===normArea(ward)||normArea(ward).includes(normArea(a))||normArea(a).includes(normArea(ward)));
 if(match)return match;return ward}}return null}catch(e){return null}}
 
 async function lCd(){loadCustomAreas();const{data}=await sb.from('candidates').select('*').order('area,sort_order');cdAll=data||[];rCd()}
@@ -275,7 +285,7 @@ async function aCd(){const nm=document.getElementById('cdNm').value.trim();if(!n
 document.getElementById('cdNm').value='';
 const area=await autoDetectArea(nm);
 await sb.from('candidates').insert({name:nm,area:area||null});
-if(area&&!DEF_AREAS.includes(area)&&!customAreas.includes(area)){customAreas.push(area);saveCustomAreas()}
+if(area&&!getAllAreas().some(a=>normArea(a)===normArea(area))){customAreas.push(area);saveCustomAreas()}
 lCd()}
 async function dlCd(id){await sb.from('candidates').delete().eq('id',id);lCd()}
 function editCdArea(id){showAreaPicker(async(area)=>{await sb.from('candidates').update({area}).eq('id',id);lCd()})}
