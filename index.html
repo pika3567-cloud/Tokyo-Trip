@@ -139,7 +139,7 @@ return`<div class="sc" draggable="true" data-idx="${i}" ondragstart="dgS(event)"
 <div class="sex"><div class="sei">${s.note?`<div class="snt">${s.note}</div>`:'<div class="snt" style="color:var(--text3)">無備註</div>'}${s.map_url?`<a href="${s.map_url}" target="_blank" style="font-size:12px;color:var(--blue);display:block;margin-bottom:8px" onclick="event.stopPropagation()">🗺️ 自訂地圖連結</a>`:''}
 <div class="sbt">${i>0?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},-1)">⬆</button>`:''} ${i<stops.length-1?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},1)">⬇</button>`:''}<button class="sbtn" onclick="event.stopPropagation();edSt(${i})">✏️ 編輯</button><button class="sbtn" onclick="event.stopPropagation();mvDay(${i})">📅 換天</button><button class="sbtn x" onclick="event.stopPropagation();dlSt(${i})">🗑️ 刪除</button></div></div></div></div>`}).join('');
 renderMap()}
-function tgS(el,e){if(e.target.closest('a')||e.target.closest('.sbtn'))return;el.classList.toggle('op')}
+function tgS(el,e){if(e.target.closest('a')||e.target.closest('.sbtn'))return;const wasOpen=el.classList.contains('op');document.querySelectorAll('.sc.op').forEach(c=>c.classList.remove('op'));if(!wasOpen)el.classList.add('op')}
 
 function dgS(e){dgI=+e.currentTarget.dataset.idx;e.currentTarget.classList.add('dg');e.dataTransfer.effectAllowed='move'}
 function dgO(e){e.preventDefault();e.currentTarget.classList.add('dv')}
@@ -237,8 +237,7 @@ const coords=parseGMapsCoords(m);
 if(coords){lat=coords.lat;lng=coords.lng}
 else if(old.lat){lat=old.lat;lng=old.lng}
 let s=[...(ct.stops||[])];if(ei>=0)s[ei]={...s[ei],time:t,name:n,desc:d,note:no,map_url:m,lat,lng};else s.push({time:t,name:n,desc:d,note:no,map_url:m,lat,lng});
-await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM();
-if(!lat){geocodeStop(s.length-1>=0?ei>=0?ei:s.length-1:0,n,m)}}
+await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
 
 function openTripM(){const idx=D.findIndex(d=>d.d===cd);const t=ct||{};
 openMo(`<h3>${ct?'編輯行程':'新增行程'}</h3><div class="mf"><label>城市</label><input id="xtC" value="${t.city||D[idx].c}"></div><div class="mf"><label>目的地</label><input id="xtD" value="${t.dest||''}" placeholder="例：淺草、上野"></div><div class="mf"><label>行程描述</label><textarea id="xtI" placeholder="今天的安排">${t.itin||''}</textarea></div><div class="mf"><label>住宿</label><input id="xtH" value="${t.hotel||''}"></div><div class="mf"><label>備註</label><textarea id="xtN">${t.notes||''}</textarea></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svTrip()">儲存</button></div>`)}
@@ -340,8 +339,19 @@ try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeUR
 if(d&&d.length){let s=[...(ct.stops||[])];s[idx].lat=parseFloat(d[0].lat);s[idx].lng=parseFloat(d[0].lon);
 await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;renderMap()}}catch(e){}}
 
-function renderMap(){
+async function renderMap(){
 const stops=ct?ct.stops||[]:[];
+if(!stops.length){document.getElementById('mapBox').style.display='none';return}
+let needGeo=false;
+for(let i=0;i<stops.length;i++){
+if(!stops[i].lat&&stops[i].name){needGeo=true;
+const coords=parseGMapsCoords(stops[i].map_url);
+if(coords){stops[i].lat=coords.lat;stops[i].lng=coords.lng}
+else{try{const q=encodeURIComponent((stops[i].map_url&&!stops[i].map_url.startsWith('http')?stops[i].map_url:stops[i].name)+' 東京');
+const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);const d=await r.json();
+if(d&&d.length){stops[i].lat=parseFloat(d[0].lat);stops[i].lng=parseFloat(d[0].lon)}
+}catch(e){}}}}
+if(needGeo){ct.stops=stops;await sb.from('trips').update({stops}).eq('id',ct.id)}
 const pts=stops.filter(s=>s.lat&&s.lng);
 const box=document.getElementById('mapBox');
 if(!pts.length){box.style.display='none';return}
@@ -359,8 +369,9 @@ const mk=L.marker(ll,{icon}).addTo(tripMap);
 mk.bindPopup(`<b>${s.name}</b>${s.desc?'<br>'+s.desc:''}`);
 mapMarkers.push(mk)});
 if(latlngs.length>1){mapLine=L.polyline(latlngs,{color:'#8BB97E',weight:3,opacity:0.7,dashArray:'8 6'}).addTo(tripMap)}
-const bounds=L.latLngBounds(latlngs);tripMap.fitBounds(bounds,{padding:[30,30],maxZoom:15});
-setTimeout(()=>tripMap.invalidateSize(),100)}
+if(latlngs.length===1){tripMap.setView(latlngs[0],14)}
+else{const bounds=L.latLngBounds(latlngs);tripMap.fitBounds(bounds,{padding:[30,30],maxZoom:15})}
+setTimeout(()=>tripMap.invalidateSize(),150)}
 
 function sRT(){sb.channel('all').on('postgres_changes',{event:'*',schema:'public',table:'trips'},()=>lTrip()).on('postgres_changes',{event:'*',schema:'public',table:'flights'},()=>lFl()).on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>lExp()).on('postgres_changes',{event:'*',schema:'public',table:'shopping'},()=>{if(cTl==='shopping')lSh()}).on('postgres_changes',{event:'*',schema:'public',table:'packing'},()=>{if(cTl==='packing')lPk()}).on('postgres_changes',{event:'*',schema:'public',table:'photo_refs'},()=>{if(cTl==='photo')lPh()}).on('postgres_changes',{event:'*',schema:'public',table:'candidates'},()=>{if(cTl==='candidates')lCd()}).on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>lSt()).subscribe()}
 init();
