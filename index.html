@@ -340,19 +340,29 @@ await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;renderMap()}}
 async function renderMap(){
 const stops=ct?ct.stops||[]:[];
 if(!stops.length){document.getElementById('mapBox').style.display='none';return}
+function cleanAddr(s){if(!s)return s;
+return s.replace(/日本/g,'').replace(/〒\d{3}-?\d{4}/g,'').replace(/[A-Za-z]+ビル/g,'').replace(/[A-Za-z]+bldg/gi,'').replace(/\d+[FBfb]$/,'').replace(/[,，]/g,' ').replace(/\s+/g,' ').trim()}
+
+async function geoQuery(q){
+try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=jp`);
+const d=await r.json();if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}}catch(e){}return null}
+
 let needGeo=false;
 for(let i=0;i<stops.length;i++){
 if(!stops[i].lat&&stops[i].name){needGeo=true;
-const queries=[stops[i].name+' 東京'];
-if(stops[i].addr)queries.unshift(stops[i].addr);
+const addr=cleanAddr(stops[i].addr);
+const name=stops[i].name;
+const queries=[];
+if(addr)queries.push(addr);
+if(addr)queries.push(addr+' Tokyo');
+queries.push(name+' Tokyo');
+queries.push(name+' 東京');
+queries.push(name);
 let found=false;
 for(const q of queries){if(found)break;
-try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=jp`);const d=await r.json();
-if(d&&d.length){stops[i].lat=parseFloat(d[0].lat);stops[i].lng=parseFloat(d[0].lon);found=true}
-}catch(e){}}
-if(!found&&stops[i].addr){try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stops[i].addr+' japan')}&format=json&limit=1`);const d=await r.json();
-if(d&&d.length){stops[i].lat=parseFloat(d[0].lat);stops[i].lng=parseFloat(d[0].lon)}
-}catch(e){}}}}
+const res=await geoQuery(q);
+if(res){stops[i].lat=res.lat;stops[i].lng=res.lng;found=true}
+await new Promise(r=>setTimeout(r,300))}}}
 if(needGeo){ct.stops=stops;await sb.from('trips').update({stops}).eq('id',ct.id)}
 const pts=stops.filter(s=>s.lat&&s.lng);
 const box=document.getElementById('mapBox');
