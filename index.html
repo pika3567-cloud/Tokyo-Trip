@@ -66,7 +66,7 @@
 <div class="pn" id="pd"><div class="ph">📋 排程<button class="pcl" onclick="tTool('candidates')">✕</button></div><div style="display:flex;gap:4px;margin-bottom:10px"><div class="pkb a" id="cdTab0" onclick="swCdTab(0,this)">📌 候選清單</div><div class="pkb" id="cdTab1" onclick="swCdTab(1,this)">💭 願望清單</div></div><div id="cdPane0"><div class="fmr"><input id="cdNm" placeholder="地點名稱（自動偵測區域）" style="flex:1"><button class="ba" style="background:var(--green)" onclick="aCd()">加入</button></div><div id="areaSel" style="display:none;margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">手動選區域：</div><div id="areaTags" style="display:flex;flex-wrap:wrap;gap:4px"></div></div><div style="font-size:11px;color:var(--text3);margin-bottom:6px">自動偵測區域 · 點區域標籤可修改 · 點地名開 Maps</div><div id="cdList"></div></div><div id="cdPane1" style="display:none"><div class="fmr"><input id="wshNm" placeholder="想做的事、想吃的東西..." style="flex:1"><button class="ba" style="background:var(--pink)" onclick="aWsh()">加入</button></div><div id="wshList"></div></div></div>
 </div>
 <div class="sbk" id="sBg" onclick="clS()"></div>
-<div class="sp" id="sPn"><div class="sti">⚙️ 設定<button class="pcl" onclick="clS()">✕</button></div><div class="sg"><div class="sgl">旅伴 A 名字</div><input class="sgi" id="snA" onchange="svN('person_a',this.value)"></div><div class="sg"><div class="sgl">旅伴 B 名字</div><input class="sgi" id="snB" onchange="svN('person_b',this.value)"></div><div class="srw"><span>🌙 深色模式</span><div class="tgl" id="sTh" onclick="tTheme()"></div></div></div>
+<div class="sp" id="sPn"><div class="sti">⚙️ 設定<button class="pcl" onclick="clS()">✕</button></div><div class="sg"><div class="sgl">旅伴 A 名字</div><input class="sgi" id="snA" onchange="svN('person_a',this.value)"></div><div class="sg"><div class="sgl">旅伴 B 名字</div><input class="sgi" id="snB" onchange="svN('person_b',this.value)"></div><div class="sg"><div class="sgl">🔒 驚喜行程密碼（4/13-4/16）</div><input class="sgi" id="sPwd" type="text" placeholder="設定密碼" onchange="svN('secret_pwd',this.value)"><div style="font-size:10px;color:var(--text3);margin-top:3px">設定後，點 4/13-4/16 需要輸入此密碼才能看內容</div></div><div class="srw"><span>🌙 深色模式</span><div class="tgl" id="sTh" onclick="tTheme()"></div></div></div>
 <div class="mo" id="mOv" onclick="clMo(event)"><div class="ml" id="mCt" onclick="event.stopPropagation()"></div></div>
 <script>
 const SU='https://iiyxkrphjzjtocpawipv.supabase.co',SK='sb_publishable_c73CKrmp1VOjuqDX6OdRZg_Fm9rDK3F';
@@ -83,11 +83,18 @@ function aTheme(){const dk=localStorage.getItem('theme')==='dark';document.docum
 function tTheme(){const isDk=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',isDk?'':'dark');localStorage.setItem('theme',isDk?'light':'dark');document.getElementById('sTh').classList.toggle('on',!isDk)}
 function openS(){document.getElementById('sPn').classList.add('a');document.getElementById('sBg').classList.add('a')}
 function clS(){document.getElementById('sPn').classList.remove('a');document.getElementById('sBg').classList.remove('a')}
-async function lSt(){const{data}=await sb.from('settings').select('*');if(data)data.forEach(r=>{st[r.key]=r.value});document.getElementById('snA').value=st.person_a;document.getElementById('snB').value=st.person_b;document.getElementById('pk0').textContent=st.person_a;document.getElementById('pk1').textContent=st.person_b}
+async function lSt(){const{data}=await sb.from('settings').select('*');if(data)data.forEach(r=>{st[r.key]=r.value});document.getElementById('snA').value=st.person_a;document.getElementById('snB').value=st.person_b;document.getElementById('pk0').textContent=st.person_a;document.getElementById('pk1').textContent=st.person_b;const pwdEl=document.getElementById('sPwd');if(pwdEl)pwdEl.value=st.secret_pwd||''}
 async function svN(k,v){st[k]=v;await sb.from('settings').upsert({key:k,value:v},{onConflict:'key'});document.getElementById('pk0').textContent=st.person_a;document.getElementById('pk1').textContent=st.person_b}
 
 function rDates(){const c=document.getElementById('dTabs');c.innerHTML=D.map(d=>`<div class="dtb${d.d===cd?' a':''}" onclick="swD('${d.d}')"><div class="dn">${d.n}</div><div class="ds">${d.s} ${d.w}</div><div class="dc">${d.c}</div></div>`).join('');setTimeout(()=>{const a=c.querySelector('.a');if(a)a.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})},80)}
-async function swD(d){cd=d;rDates();await lDay();lW()}
+let secretUnlocked=false;
+const SECRET_DATES=['2026-04-13','2026-04-14','2026-04-15','2026-04-16'];
+async function swD(d){
+if(SECRET_DATES.includes(d)&&st.secret_pwd&&!secretUnlocked){
+openMoCtr(`<h3 style="font-size:15px">🔒 驚喜行程</h3><div style="text-align:center;color:var(--text2);font-size:13px;margin-bottom:12px">請輸入密碼查看內容</div><div class="mf"><input type="password" id="xPwd" placeholder="輸入密碼" style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')chkPwd('${d}')"></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="chkPwd('${d}')">確認</button></div>`);
+setTimeout(()=>{const el=document.getElementById('xPwd');if(el)el.focus()},200);return}
+cd=d;rDates();await lDay();lW()}
+function chkPwd(d){const v=document.getElementById('xPwd').value;if(v===st.secret_pwd){secretUnlocked=true;clM();cd=d;rDates();lDay();lW()}else{alert('密碼錯誤！')}}
 
 async function lW(){const el=document.getElementById('wBar');try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=35.6762&longitude=139.6503&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&timezone=Asia/Tokyo&start_date=${cd}&end_date=${cd}`);const d=await r.json();if(d.daily&&d.daily.time&&d.daily.time.length){const mx=d.daily.temperature_2m_max[0],mn=d.daily.temperature_2m_min[0],rn=d.daily.precipitation_probability_max[0],co=d.daily.weathercode[0];const ic=co===0?'☀️':co<=3?'⛅':co<=49?'🌫️':co<=69?'🌧️':co<=79?'🌨️':co<=99?'⛈️':'🌤️';el.innerHTML=`<span class="wi">${ic}</span><span class="wt">${mn}°~${mx}°C</span><span>降雨 ${rn}%</span>`}else el.innerHTML=`<span class="wi">📅</span><span>尚無天氣預報</span>`}catch(e){el.innerHTML=`<span class="wi">⚠️</span><span>天氣載入失敗</span>`}}
 
@@ -234,7 +241,7 @@ function openPhM(){openMo(`<h3>新增拍攝參考</h3><div class="mf"><label>媒
 async function svPh(){const ig=document.getElementById('xrI').value.trim(),c=document.getElementById('xrC').value.trim(),l=document.getElementById('xrL').value.trim(),n=document.getElementById('xrN').value.trim();if(!ig&&!c){alert('請填入連結或文字描述');return}await sb.from('photo_refs').insert({project:cPrj,ref_type:ig?'media':'text',content:c,ig_url:ig||null,location:l,notes:n});lPh();clM()}
 
 // Candidates & Wishlist
-const DEF_AREAS=['新宿','澀谷','淺草','銀座','上野','原宿','池袋','秋葉原','六本木','台場','下北澤','中目黑','吉祥寺','東京車站'];
+const DEF_AREAS=['新宿區','澀谷區','台東區','中央區','台東區','渋谷區','豐島區','千代田區','港區','江東區','墨田區','世田谷區','目黑區','武藏野市','文京區','品川區'];
 let customAreas=[],cdAll=[],cdTabIdx=0;
 function loadCustomAreas(){try{customAreas=JSON.parse(localStorage.getItem('customAreas')||'[]')}catch(e){customAreas=[]}}
 function saveCustomAreas(){localStorage.setItem('customAreas',JSON.stringify(customAreas))}
@@ -249,10 +256,13 @@ function rmCustomArea(a){customAreas=customAreas.filter(x=>x!==a);saveCustomArea
 function showAreaPicker(cb){pickAreaCb=cb;rAreaTags();document.getElementById('areaSel').style.display='block'}
 
 async function autoDetectArea(name){
-try{const q=encodeURIComponent(name+' 東京');const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=1&accept-language=zh-TW`);const d=await r.json();
-if(d&&d.length&&d[0].address){const addr=d[0].address;const ward=addr.city_district||addr.suburb||addr.neighbourhood||addr.city||'';
-const all=getAllAreas();const match=all.find(a=>ward.includes(a));
-if(match)return match;if(ward)return ward}return null}catch(e){return null}}
+try{const q=encodeURIComponent(name+' 東京');const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=1&accept-language=ja`);const d=await r.json();
+if(d&&d.length&&d[0].address){const addr=d[0].address;
+let ward=addr.city_district||addr.suburb||'';
+if(ward&&ward.endsWith('区'))ward=ward.replace('区','區');
+if(!ward&&addr.city)ward=addr.city;
+if(ward){const all=getAllAreas();const match=all.find(a=>ward.includes(a)||a.includes(ward));
+if(match)return match;return ward}}return null}catch(e){return null}}
 
 async function lCd(){loadCustomAreas();const{data}=await sb.from('candidates').select('*').order('area,sort_order');cdAll=data||[];rCd()}
 function rCd(){const el=document.getElementById('cdList');if(!cdAll.length){el.innerHTML='<div class="emp">尚未新增候選地點</div>';return}
