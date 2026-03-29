@@ -341,20 +341,17 @@ await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;renderMap()}}
 async function renderMap(){
 const stops=ct?ct.stops||[]:[];
 if(!stops.length){document.getElementById('mapBox').style.display='none';return}
-function cleanAddr(s){if(!s)return s;
+function extractAddr(s){if(!s)return[];
 s=s.replace(/[−–—]/g,'-');
-s=s.replace(/日本/g,'');
-s=s.replace(/〒[\d-]+/g,'');
-s=s.replace(/\S*ビル\S*/g,'');
-s=s.replace(/\S*マンション\S*/g,'');
-s=s.replace(/\S*タワー\S*/g,'');
-s=s.replace(/\S*ハイツ\S*/g,'');
-s=s.replace(/\S*bldg\S*/gi,'');
-s=s.replace(/\S*building\S*/gi,'');
-s=s.replace(/\d+[FBfb]$/,'');
-s=s.replace(/[,，、]/g,' ');
-s=s.replace(/\s+/g,' ');
-return s.trim()}
+const parts=s.split(/[,，、\s]+/).map(p=>p.trim()).filter(Boolean);
+const skip=/^(日本|Japan|〒|[0-9]{3}-?[0-9]{4}|\d+[FBfb]|$)/i;
+const skipDetail=/ビル|マンション|タワー|ハイツ|コーポ|アパート|bldg|building|内|区画|通り|地下街/i;
+const useful=parts.filter(p=>!skip.test(p)&&!skipDetail.test(p)&&p.length>0);
+const results=[];
+if(useful.length>=3)results.push(useful.slice(0,3).join(' '));
+if(useful.length>=2)results.push(useful.slice(0,2).join(' '));
+if(useful.length>=1)results.push(useful[0]);
+return results}
 
 async function geoQuery(q){
 try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=jp`);
@@ -363,16 +360,11 @@ const d=await r.json();if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseF
 let needGeo=false;
 for(let i=0;i<stops.length;i++){
 if(!stops[i].lat&&stops[i].name){needGeo=true;
-const addr=cleanAddr(stops[i].addr);
-const name=stops[i].name;
-const queries=[];
-if(addr)queries.push(addr);
-if(addr)queries.push(addr+' Tokyo');
-queries.push(name+' Tokyo');
-queries.push(name+' 東京');
-queries.push(name);
+const addrQueries=stops[i].addr?extractAddr(stops[i].addr):[];
+const queries=[...addrQueries,stops[i].name+' Tokyo',stops[i].name+' 東京',stops[i].name];
+const seen=new Set();const uniq=queries.filter(q=>{if(seen.has(q))return false;seen.add(q);return true});
 let found=false;
-for(const q of queries){if(found)break;
+for(const q of uniq){if(found)break;
 const res=await geoQuery(q);
 if(res){stops[i].lat=res.lat;stops[i].lng=res.lng;found=true}
 await new Promise(r=>setTimeout(r,300))}}}
