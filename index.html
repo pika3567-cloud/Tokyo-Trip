@@ -49,7 +49,7 @@
 <div id="fArea"></div>
 <div class="mn">
 <div id="dHdr"></div><div id="dInfo"></div><div id="tRow"></div>
-<div class="st" id="sTitle" style="display:none">📍 當日行程地點</div>
+<div class="st" id="sTitle" style="display:none;justify-content:space-between;align-items:center">📍 當日行程地點<button onclick="sortByTime()" style="font-size:11px;padding:3px 10px;border-radius:12px;border:.5px solid var(--bg3);background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit">🕐 按時間排序</button></div>
 <div id="mapBox" style="display:none;height:220px;border-radius:10px;overflow:hidden;margin-bottom:8px;border:.5px solid var(--bg3);position:relative;z-index:0"></div>
 <div class="sl" id="sList"></div>
 <div class="as" id="aStop" onclick="openStopM()" style="display:none">＋ 新增地點</div>
@@ -134,15 +134,30 @@ async function rmTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.t
 function aTr(){const v=prompt('輸入交通方式：');if(!v)return;tTr(v.trim())}
 
 let lastMovedIdx=null;
+function findOutOfOrder(stops){
+const times=stops.map((s,i)=>({t:s.time||'',i})).filter(x=>x.t);
+if(times.length<=1)return new Set();
+const n=times.length;const tails=[];const tailIdx=[];const prev=Array(n).fill(-1);
+for(let i=0;i<n;i++){const v=times[i].t;let lo=0,hi=tails.length;
+while(lo<hi){const mid=(lo+hi)>>1;if(tails[mid]<=v)lo=mid+1;else hi=mid}
+tails[lo]=v;tailIdx[lo]=i;if(lo>0)prev[i]=tailIdx[lo-1]}
+const inLIS=new Set();let ci=tailIdx[tails.length-1];
+while(ci>=0){inLIS.add(times[ci].i);ci=prev[ci]}
+if(inLIS.size<=1&&times.length>1)return new Set(times.map(x=>x.i));
+const bad=new Set();times.forEach(x=>{if(!inLIS.has(x.i))bad.add(x.i)});return bad}
+
+async function sortByTime(){if(!ct||!ct.stops)return;let s=[...(ct.stops||[])];
+s.sort((a,b)=>{if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time)});
+await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
+
 function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.stops):(ct.stops||[])}catch(e){}
-document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
+document.getElementById('sTitle').style.display=ct?'flex':'none';document.getElementById('aStop').style.display=ct?'block':'none';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
 if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';document.getElementById('mapBox').style.display='none';return}
+const badIdx=findOutOfOrder(stops);
 document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
-let outOfOrder=false;
-if(s.time){const prev=i>0?stops[i-1].time:null;const next=i<stops.length-1?stops[i+1].time:null;
-if((prev&&s.time<prev)||(next&&s.time>next))outOfOrder=true}
+const outOfOrder=badIdx.has(i);
 const timeStyle=outOfOrder?'color:var(--coral);font-weight:600;cursor:pointer':'';
-const timeClick=outOfOrder?`onclick="event.stopPropagation();quickTime(${i})"`:s.time?'':`onclick="event.stopPropagation();quickTime(${i})"`;
+const timeClick=outOfOrder||!s.time?`onclick="event.stopPropagation();quickTime(${i})"`:'';
 const timeHtml=s.time?`<div class="stm mono" style="${timeStyle}" ${timeClick} title="${outOfOrder?'⚠️ 時間順序不對，點擊修改':''}">${outOfOrder?'⚠️ ':''}${s.time}</div>`:`<div class="stm mono" style="color:var(--text3);cursor:pointer" onclick="event.stopPropagation();quickTime(${i})" title="點擊設定時間">＋ 時間</div>`;
 return`<div class="sc" draggable="true" data-idx="${i}" ondragstart="dgS(event)" ondragover="dgO(event)" ondragleave="dgL(event)" ondrop="dgD(event)" ondragend="dgE(event)" onclick="tgS(this,event)">
 <div class="stp"><span style="font-size:14px;color:var(--text3);cursor:grab;flex-shrink:0;padding:0 2px" title="拖拉排序">⠿</span><div class="sn">${i+1}</div><div class="sb">${timeHtml}<div class="snm"><a href="${mu}" target="_blank" onclick="event.stopPropagation()"><span class="pin" style="font-size:12px">📍</span>${s.name}</a></div>${s.desc?`<div class="sds">${s.desc}</div>`:''}</div><span class="smn">⋮</span></div>
