@@ -120,7 +120,7 @@ function cSwap(){cDir=cDir==='twd_jpy'?'jpy_twd':'twd_jpy';document.getElementBy
 function qC(a){if(cDir!=='jpy_twd'){cDir='jpy_twd';document.getElementById('cfL').textContent='JPY 日圓';document.getElementById('ctL').textContent='TWD 台幣';updCurLabel()}document.getElementById('cfV').value=a;cCalc()}
 
 async function lDay(){await Promise.all([lTrip(),lFl(),lExp()])}
-async function lTrip(){const{data}=await sb.from('trips').select('*').eq('date',cd).order('sort_order');ct=data&&data.length?data[0]:null;rDay()}
+async function lTrip(){const{data}=await sb.from('trips').select('*').eq('date',cd).order('sort_order');ct=data&&data.length?data[0]:null;lastMovedIdx=null;rDay()}
 function rDay(){const idx=D.findIndex(d=>d.d===cd);if(!ct){['dHdr','dInfo','tRow'].forEach(id=>document.getElementById(id).innerHTML='');document.getElementById('sTitle').style.display='none';document.getElementById('sList').innerHTML='';document.getElementById('aStop').style.display='none';document.getElementById('mBtn').style.display='none';document.getElementById('mapBox').style.display='none';document.getElementById('cArea').innerHTML='';document.getElementById('noTrip').style.display='block';return}
 document.getElementById('noTrip').style.display='none';const t=ct;
 document.getElementById('dHdr').innerHTML=`<div class="dhd"><span class="dl">第${idx+1}天(${D[idx].w})</span><span class="ct">${t.city||D[idx].c}</span><div class="da"><button onclick="openTripM()" title="編輯">✏️</button><button onclick="delTrip()" title="刪除">🗑️</button></div></div>`;
@@ -133,11 +133,15 @@ async function tTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.tr
 async function rmTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.trim()):[];sel=sel.filter(s=>s!==tag);const v=sel.join(', ');await sb.from('trips').update({transport:v}).eq('id',ct.id);ct.transport=v;rTr()}
 function aTr(){const v=prompt('輸入交通方式：');if(!v)return;tTr(v.trim())}
 
+let lastMovedIdx=null;
 function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.stops):(ct.stops||[])}catch(e){}
 document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
 if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';document.getElementById('mapBox').style.display='none';return}
 document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
-const outOfOrder=s.time&&i>0&&stops[i-1].time&&s.time<stops[i-1].time;
+const movedHere=lastMovedIdx===i;
+const prevTime=i>0&&stops[i-1].time?stops[i-1].time:null;
+const nextTime=i<stops.length-1&&stops[i+1].time?stops[i+1].time:null;
+const outOfOrder=movedHere&&s.time&&((prevTime&&s.time<prevTime)||(nextTime&&s.time>nextTime));
 const timeStyle=outOfOrder?'color:var(--coral);font-weight:600;cursor:pointer':'';
 const timeClick=outOfOrder?`onclick="event.stopPropagation();quickTime(${i})"`:s.time?'':`onclick="event.stopPropagation();quickTime(${i})"`;
 const timeHtml=s.time?`<div class="stm mono" style="${timeStyle}" ${timeClick} title="${outOfOrder?'⚠️ 時間順序不對，點擊修改':''}">${outOfOrder?'⚠️ ':''}${s.time}</div>`:`<div class="stm mono" style="color:var(--text3);cursor:pointer" onclick="event.stopPropagation();quickTime(${i})" title="點擊設定時間">＋ 時間</div>`;
@@ -152,8 +156,8 @@ function dgS(e){dgI=+e.currentTarget.dataset.idx;e.currentTarget.classList.add('
 function dgO(e){e.preventDefault();e.currentTarget.classList.add('dv')}
 function dgL(e){e.currentTarget.classList.remove('dv')}
 function dgE(e){document.querySelectorAll('.sc').forEach(c=>c.classList.remove('dg','dv'))}
-async function dgD(e){e.preventDefault();const to=+e.currentTarget.dataset.idx;if(dgI===null||dgI===to)return;let s=[...(ct.stops||[])];const[m]=s.splice(dgI,1);s.splice(to,0,m);await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();dgI=null}
-async function mvSt(idx,dir){let s=[...(ct.stops||[])];const to=idx+dir;if(to<0||to>=s.length)return;const[m]=s.splice(idx,1);s.splice(to,0,m);await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
+async function dgD(e){e.preventDefault();const to=+e.currentTarget.dataset.idx;if(dgI===null||dgI===to)return;let s=[...(ct.stops||[])];const[m]=s.splice(dgI,1);s.splice(to,0,m);lastMovedIdx=to;await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();dgI=null}
+async function mvSt(idx,dir){let s=[...(ct.stops||[])];const to=idx+dir;if(to<0||to>=s.length)return;const[m]=s.splice(idx,1);s.splice(to,0,m);lastMovedIdx=to;await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
 async function dlSt(i){if(!confirm('刪除此地點？'))return;let s=[...(ct.stops||[])];s.splice(i,1);await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
 
 function openMR(e){e.preventDefault();if(!ct||!ct.stops||!ct.stops.length){alert('尚未新增地點');return}
@@ -257,7 +261,7 @@ openMoCtr(`<h3 style="font-size:15px">⏰ 設定時間</h3>
 setTimeout(()=>{const el=document.getElementById('xqTime');if(el)el.focus()},200)}
 async function saveQuickTime(idx){const t=document.getElementById('xqTime').value;let s=[...(ct.stops||[])];s[idx].time=t;
 s.sort((a,b)=>{if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time)});
-await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
+lastMovedIdx=null;await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
 
 function openTripM(){const idx=D.findIndex(d=>d.d===cd);const t=ct||{};
 openMo(`<h3>${ct?'編輯行程':'新增行程'}</h3><div class="mf"><label>城市</label><input id="xtC" value="${t.city||D[idx].c}"></div><div class="mf"><label>目的地</label><input id="xtD" value="${t.dest||''}" placeholder="例：淺草、上野"></div><div class="mf"><label>行程描述</label><textarea id="xtI" placeholder="今天的安排">${t.itin||''}</textarea></div><div class="mf"><label>住宿</label><input id="xtH" value="${t.hotel||''}"></div><div class="mf"><label>備註</label><textarea id="xtN">${t.notes||''}</textarea></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svTrip()">儲存</button></div>`)}
