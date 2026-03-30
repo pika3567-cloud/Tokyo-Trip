@@ -137,8 +137,12 @@ function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.s
 document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
 if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';document.getElementById('mapBox').style.display='none';return}
 document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
+const outOfOrder=s.time&&i>0&&stops[i-1].time&&s.time<stops[i-1].time;
+const timeStyle=outOfOrder?'color:var(--coral);font-weight:600;cursor:pointer':'';
+const timeClick=outOfOrder?`onclick="event.stopPropagation();quickTime(${i})"`:s.time?'':`onclick="event.stopPropagation();quickTime(${i})"`;
+const timeHtml=s.time?`<div class="stm mono" style="${timeStyle}" ${timeClick} title="${outOfOrder?'⚠️ 時間順序不對，點擊修改':''}">${outOfOrder?'⚠️ ':''}${s.time}</div>`:`<div class="stm mono" style="color:var(--text3);cursor:pointer" onclick="event.stopPropagation();quickTime(${i})" title="點擊設定時間">＋ 時間</div>`;
 return`<div class="sc" draggable="true" data-idx="${i}" ondragstart="dgS(event)" ondragover="dgO(event)" ondragleave="dgL(event)" ondrop="dgD(event)" ondragend="dgE(event)" onclick="tgS(this,event)">
-<div class="stp"><span style="font-size:14px;color:var(--text3);cursor:grab;flex-shrink:0;padding:0 2px" title="拖拉排序">⠿</span><div class="sn">${i+1}</div><div class="sb"><div class="stm mono">${s.time||''}</div><div class="snm"><a href="${mu}" target="_blank" onclick="event.stopPropagation()"><span class="pin" style="font-size:12px">📍</span>${s.name}</a></div>${s.desc?`<div class="sds">${s.desc}</div>`:''}</div><span class="smn">⋮</span></div>
+<div class="stp"><span style="font-size:14px;color:var(--text3);cursor:grab;flex-shrink:0;padding:0 2px" title="拖拉排序">⠿</span><div class="sn">${i+1}</div><div class="sb">${timeHtml}<div class="snm"><a href="${mu}" target="_blank" onclick="event.stopPropagation()"><span class="pin" style="font-size:12px">📍</span>${s.name}</a></div>${s.desc?`<div class="sds">${s.desc}</div>`:''}</div><span class="smn">⋮</span></div>
 <div class="sex"><div class="sei">${s.note?`<div class="snt">${s.note}</div>`:'<div class="snt" style="color:var(--text3)">無備註</div>'}${s.addr?`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">📍 ${s.addr}</div>`:''}
 <div class="sbt">${i>0?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},-1)">⬆</button>`:''} ${i<stops.length-1?`<button class="sbtn" onclick="event.stopPropagation();mvSt(${i},1)">⬇</button>`:''}<button class="sbtn" onclick="event.stopPropagation();edSt(${i})">✏️ 編輯</button><button class="sbtn" onclick="event.stopPropagation();mvDay(${i})">📅 換天</button><button class="sbtn x" onclick="event.stopPropagation();dlSt(${i})">🗑️ 刪除</button></div></div></div></div>`}).join('');
 renderMap()}
@@ -237,7 +241,22 @@ function edSt(i){openStopM(i)}
 async function svSt(ei){const t=document.getElementById('xsT').value,n=document.getElementById('xsN').value.trim(),d=document.getElementById('xsD').value.trim(),no=document.getElementById('xsNo').value.trim(),addr=document.getElementById('xsAddr').value.trim();if(!n){alert('請輸入地點名稱');return}
 let lat=null,lng=null;const old=ei>=0?ct.stops[ei]:{};
 if(old.lat&&!addr){lat=old.lat;lng=old.lng}
-let s=[...(ct.stops||[])];if(ei>=0)s[ei]={...s[ei],time:t,name:n,desc:d,note:no,addr,lat,lng};else s.push({time:t,name:n,desc:d,note:no,addr,lat,lng});
+let s=[...(ct.stops||[])];
+if(ei>=0){s[ei]={...s[ei],time:t,name:n,desc:d,note:no,addr,lat,lng};
+s.sort((a,b)=>{if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time)})}
+else{const newStop={time:t,name:n,desc:d,note:no,addr,lat,lng};
+if(t){let inserted=false;for(let j=0;j<s.length;j++){if(s[j].time&&t<s[j].time){s.splice(j,0,newStop);inserted=true;break}}if(!inserted)s.push(newStop)}
+else{s.push(newStop)}}
+await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
+
+function quickTime(idx){const s=ct.stops[idx];
+openMoCtr(`<h3 style="font-size:15px">⏰ 設定時間</h3>
+<div style="text-align:center;margin-bottom:8px;font-size:13px;color:var(--text2)">${s.name}</div>
+<div class="mf"><input type="time" id="xqTime" value="${s.time||''}" style="text-align:center;font-size:18px"></div>
+<div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="saveQuickTime(${idx})">儲存</button></div>`)
+setTimeout(()=>{const el=document.getElementById('xqTime');if(el)el.focus()},200)}
+async function saveQuickTime(idx){const t=document.getElementById('xqTime').value;let s=[...(ct.stops||[])];s[idx].time=t;
+s.sort((a,b)=>{if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time)});
 await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
 
 function openTripM(){const idx=D.findIndex(d=>d.d===cd);const t=ct||{};
