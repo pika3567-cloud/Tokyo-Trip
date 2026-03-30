@@ -138,10 +138,9 @@ function rSt(){let stops=[];try{stops=typeof ct.stops==='string'?JSON.parse(ct.s
 document.getElementById('sTitle').style.display='block';document.getElementById('aStop').style.display='block';document.getElementById('mBtn').style.display=stops.length?'flex':'none';
 if(!stops.length){document.getElementById('sList').innerHTML='<div class="emp">尚未新增地點</div>';document.getElementById('mapBox').style.display='none';return}
 document.getElementById('sList').innerHTML=stops.map((s,i)=>{const mu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
-const movedHere=lastMovedIdx===i;
-const prevTime=i>0&&stops[i-1].time?stops[i-1].time:null;
-const nextTime=i<stops.length-1&&stops[i+1].time?stops[i+1].time:null;
-const outOfOrder=movedHere&&s.time&&((prevTime&&s.time<prevTime)||(nextTime&&s.time>nextTime));
+let outOfOrder=false;
+if(s.time){const prev=i>0?stops[i-1].time:null;const next=i<stops.length-1?stops[i+1].time:null;
+if((prev&&s.time<prev)||(next&&s.time>next))outOfOrder=true}
 const timeStyle=outOfOrder?'color:var(--coral);font-weight:600;cursor:pointer':'';
 const timeClick=outOfOrder?`onclick="event.stopPropagation();quickTime(${i})"`:s.time?'':`onclick="event.stopPropagation();quickTime(${i})"`;
 const timeHtml=s.time?`<div class="stm mono" style="${timeStyle}" ${timeClick} title="${outOfOrder?'⚠️ 時間順序不對，點擊修改':''}">${outOfOrder?'⚠️ ':''}${s.time}</div>`:`<div class="stm mono" style="color:var(--text3);cursor:pointer" onclick="event.stopPropagation();quickTime(${i})" title="點擊設定時間">＋ 時間</div>`;
