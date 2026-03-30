@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <style>
@@ -41,7 +43,7 @@
 </style>
 </head>
 <body>
-<header class="hd"><div class="hd-t">✈️ 2026 東京十日遊</div><div class="hd-r"><span class="cd"></span><span style="font-size:11px;color:var(--text3)">已連線</span><button class="ib" onclick="openS()">⚙️</button></div></header>
+<header class="hd"><div class="hd-t">✈️ 2026 東京十日遊</div><div class="hd-r"><span class="cd"></span><span style="font-size:11px;color:var(--text3)">已連線</span><button class="ib" onclick="exportTrip()">📤</button><button class="ib" onclick="openS()">⚙️</button></div></header>
 <div class="dt" id="dTabs"></div>
 <div class="wb" id="wBar"><span class="wi">⏳</span><span>載入天氣中...</span></div>
 <div id="fArea"></div>
@@ -101,7 +103,7 @@ async function svN(k,v){st[k]=v;await sb.from('settings').upsert({key:k,value:v}
 
 function rDates(){const c=document.getElementById('dTabs');c.innerHTML=D.map(d=>`<div class="dtb${d.d===cd?' a':''}" onclick="swD('${d.d}')"><div class="dn">${d.n}</div><div class="ds">${d.s} ${d.w}</div><div class="dc">${d.c}</div></div>`).join('');setTimeout(()=>{const a=c.querySelector('.a');if(a)a.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})},80)}
 let secretUnlocked=false;
-const SECRET_DATES=['2026-04-13','2026-04-14','2026-04-15','2026-04-16'];
+const SECRET_DATES=['2026-04-13','2026-04-14','2026-04-15'];
 async function swD(d){
 if(SECRET_DATES.includes(d)&&st.secret_pwd&&!secretUnlocked){
 openMoCtr(`<h3 style="font-size:15px">🔒 驚喜行程</h3><div style="text-align:center;color:var(--text2);font-size:13px;margin-bottom:12px">請輸入密碼查看內容</div><div class="mf"><input type="password" id="xPwd" placeholder="輸入密碼" style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')chkPwd('${d}')"></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="chkPwd('${d}')">確認</button></div>`);
@@ -389,6 +391,44 @@ if(latlngs.length>1){mapLine=L.polyline(latlngs,{color:'#8BB97E',weight:3,opacit
 if(latlngs.length===1){tripMap.setView(latlngs[0],14)}
 else{const bounds=L.latLngBounds(latlngs);tripMap.fitBounds(bounds,{padding:[30,30],maxZoom:15})}
 setTimeout(()=>tripMap.invalidateSize(),150)}
+
+// Export
+function exportTrip(){
+openMoCtr(`<h3 style="font-size:15px">📤 匯出行程</h3>
+<div style="display:flex;gap:8px;margin-top:12px">
+<div onclick="doExport('pdf')" style="flex:1;padding:14px;border-radius:10px;background:var(--bg);border:.5px solid var(--bg3);text-align:center;cursor:pointer">
+<div style="font-size:24px;margin-bottom:4px">📄</div><div style="font-size:13px;font-weight:500">PDF 下載</div></div>
+<div onclick="doExport('img')" style="flex:1;padding:14px;border-radius:10px;background:var(--bg);border:.5px solid var(--bg3);text-align:center;cursor:pointer">
+<div style="font-size:24px;margin-bottom:4px">🖼️</div><div style="font-size:13px;font-weight:500">長圖下載</div></div>
+</div>
+<div style="font-size:10px;color:var(--text3);text-align:center;margin-top:8px">只匯出行程，不含記帳/行李等工具</div>`)}
+
+async function doExport(type){
+clM();
+const {data:allTrips}=await sb.from('trips').select('*').order('sort_order');
+const trips=allTrips||[];
+const el=document.createElement('div');
+el.style.cssText='position:absolute;left:-9999px;top:0;width:400px;padding:24px;background:#fff;font-family:Noto Sans TC,sans-serif;color:#3A3630';
+let html=`<div style="text-align:center;margin-bottom:16px"><div style="font-size:20px;font-weight:700">✈️ 2026 東京十日遊</div><div style="font-size:12px;color:#9C9890;margin-top:4px">4/7 (二) ~ 4/16 (四)</div></div>`;
+D.forEach((day,idx)=>{
+const t=trips.find(tr=>tr.date===day.d);
+html+=`<div style="height:1px;background:#E2DED6;margin:12px 0"></div>`;
+html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:16px;font-weight:700">第${idx+1}天</span><span style="font-size:12px;color:#fff;background:#8BB97E;padding:2px 10px;border-radius:10px">${day.s} (${day.w})</span><span style="font-size:12px;color:#3A5A32;background:#D4E8D0;padding:2px 10px;border-radius:10px">${t?t.city:day.c}</span></div>`;
+if(t){
+if(t.hotel||t.transport)html+=`<div style="display:flex;gap:12px;margin-bottom:8px;font-size:12px;color:#6B6860">${t.hotel?`<span>🏨 ${t.hotel}</span>`:''}${t.transport?`<span>🚃 ${t.transport}</span>`:''}</div>`;
+let stops=[];try{stops=typeof t.stops==='string'?JSON.parse(t.stops):(t.stops||[])}catch(e){}
+if(stops.length){html+=`<div style="position:relative;padding-left:20px">`;
+html+=`<div style="position:absolute;left:6px;top:0;bottom:0;width:1.5px;background:#D4E8D0"></div>`;
+stops.forEach(s=>{html+=`<div style="position:relative;padding:5px 0"><div style="position:absolute;left:-17px;top:7px;width:10px;height:10px;border-radius:50%;background:#8BB97E;border:2px solid #fff"></div><div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:11px;color:#9C9890;font-family:monospace;min-width:36px">${s.time||''}</span><span style="font-size:13px;font-weight:500">${s.name}</span></div>${s.desc?`<div style="font-size:11px;color:#6B6860;margin-left:44px">${s.desc}</div>`:''}</div>`});
+html+=`</div>`}
+}else{html+=`<div style="font-size:12px;color:#9C9890;padding:8px 0">尚未安排</div>`}
+});
+el.innerHTML=html;document.body.appendChild(el);
+try{const canvas=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+if(type==='img'){const link=document.createElement('a');link.download='東京十日遊行程.png';link.href=canvas.toDataURL('image/png');link.click()}
+else{const{jsPDF}=window.jspdf;const imgW=canvas.width;const imgH=canvas.height;const pdfW=210;const pdfH=imgH*pdfW/imgW;const pdf=new jsPDF({unit:'mm',format:[pdfW,pdfH]});pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,0,pdfW,pdfH);pdf.save('東京十日遊行程.pdf')}
+}catch(e){alert('匯出失敗，請稍後再試')}
+document.body.removeChild(el)}
 
 function sRT(){sb.channel('all').on('postgres_changes',{event:'*',schema:'public',table:'trips'},()=>lTrip()).on('postgres_changes',{event:'*',schema:'public',table:'flights'},()=>lFl()).on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>lExp()).on('postgres_changes',{event:'*',schema:'public',table:'shopping'},()=>{if(cTl==='shopping')lSh()}).on('postgres_changes',{event:'*',schema:'public',table:'packing'},()=>{if(cTl==='packing')lPk()}).on('postgres_changes',{event:'*',schema:'public',table:'photo_refs'},()=>{if(cTl==='photo')lPh()}).on('postgres_changes',{event:'*',schema:'public',table:'candidates'},()=>{if(cTl==='candidates')lCd()}).on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>lSt()).subscribe()}
 init();
