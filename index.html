@@ -378,7 +378,8 @@ if(d&&d.length){let s=[...(ct.stops||[])];s[idx].lat=parseFloat(d[0].lat);s[idx]
 await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;renderMap()}}catch(e){}}
 
 async function renderMap(){
-const stops=ct?ct.stops||[]:[];
+const stops=ct?[...(ct.stops||[])]:[];
+const tripId=ct?ct.id:null;
 if(!stops.length){document.getElementById('mapBox').style.display='none';return}
 function extractAddr(s){if(!s)return[];
 s=s.replace(/[−–—]/g,'-');
@@ -407,7 +408,8 @@ for(const q of uniq){if(found)break;
 const res=await geoQuery(q);
 if(res){stops[i].lat=res.lat;stops[i].lng=res.lng;found=true}
 await new Promise(r=>setTimeout(r,300))}}}
-if(needGeo){ct.stops=stops;await sb.from('trips').update({stops}).eq('id',ct.id)}
+if(needGeo&&ct&&ct.id===tripId){ct.stops=stops;await sb.from('trips').update({stops}).eq('id',tripId)}
+if(!ct||ct.id!==tripId)return;
 const pts=stops.filter(s=>s.lat&&s.lng);
 const box=document.getElementById('mapBox');
 if(!pts.length){box.style.display='none';return}
