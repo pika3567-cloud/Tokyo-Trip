@@ -120,7 +120,7 @@ function cSwap(){cDir=cDir==='twd_jpy'?'jpy_twd':'twd_jpy';document.getElementBy
 function qC(a){if(cDir!=='jpy_twd'){cDir='jpy_twd';document.getElementById('cfL').textContent='JPY 日圓';document.getElementById('ctL').textContent='TWD 台幣';updCurLabel()}document.getElementById('cfV').value=a;cCalc()}
 
 async function lDay(){await Promise.all([lTrip(),lFl(),lExp()])}
-async function lTrip(){const{data}=await sb.from('trips').select('*').eq('date',cd).order('sort_order');ct=data&&data.length?data[0]:null;lastMovedIdx=null;rDay()}
+async function lTrip(){const{data}=await sb.from('trips').select('*').eq('date',cd).order('sort_order');ct=data&&data.length?data[0]:null;rDay()}
 function rDay(){const idx=D.findIndex(d=>d.d===cd);if(!ct){['dHdr','dInfo','tRow'].forEach(id=>document.getElementById(id).innerHTML='');document.getElementById('sTitle').style.display='none';document.getElementById('sList').innerHTML='';document.getElementById('aStop').style.display='none';document.getElementById('mBtn').style.display='none';document.getElementById('mapBox').style.display='none';document.getElementById('cArea').innerHTML='';document.getElementById('noTrip').style.display='block';return}
 document.getElementById('noTrip').style.display='none';const t=ct;
 document.getElementById('dHdr').innerHTML=`<div class="dhd"><span class="dl">第${idx+1}天(${D[idx].w})</span><span class="ct">${t.city||D[idx].c}</span><div class="da"><button onclick="openTripM()" title="編輯">✏️</button><button onclick="delTrip()" title="刪除">🗑️</button></div></div>`;
@@ -133,7 +133,6 @@ async function tTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.tr
 async function rmTr(tag){let sel=ct.transport?ct.transport.split(',').map(s=>s.trim()):[];sel=sel.filter(s=>s!==tag);const v=sel.join(', ');await sb.from('trips').update({transport:v}).eq('id',ct.id);ct.transport=v;rTr()}
 function aTr(){const v=prompt('輸入交通方式：');if(!v)return;tTr(v.trim())}
 
-let lastMovedIdx=null;
 function findOutOfOrder(stops){
 const times=stops.map((s,i)=>({t:s.time||'',i})).filter(x=>x.t);
 if(times.length<=1)return new Set();
@@ -170,12 +169,12 @@ function dgS(e){dgI=+e.currentTarget.dataset.idx;e.currentTarget.classList.add('
 function dgO(e){e.preventDefault();e.currentTarget.classList.add('dv')}
 function dgL(e){e.currentTarget.classList.remove('dv')}
 function dgE(e){document.querySelectorAll('.sc').forEach(c=>c.classList.remove('dg','dv'))}
-async function dgD(e){e.preventDefault();const to=+e.currentTarget.dataset.idx;if(dgI===null||dgI===to)return;let s=[...(ct.stops||[])];const[m]=s.splice(dgI,1);s.splice(to,0,m);lastMovedIdx=to;await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();dgI=null}
-async function mvSt(idx,dir){let s=[...(ct.stops||[])];const to=idx+dir;if(to<0||to>=s.length)return;const[m]=s.splice(idx,1);s.splice(to,0,m);lastMovedIdx=to;await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
+async function dgD(e){e.preventDefault();const to=+e.currentTarget.dataset.idx;if(dgI===null||dgI===to)return;let s=[...(ct.stops||[])];const[m]=s.splice(dgI,1);s.splice(to,0,m);await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();dgI=null}
+async function mvSt(idx,dir){let s=[...(ct.stops||[])];const to=idx+dir;if(to<0||to>=s.length)return;const[m]=s.splice(idx,1);s.splice(to,0,m);await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
 async function dlSt(i){if(!confirm('刪除此地點？'))return;let s=[...(ct.stops||[])];s.splice(i,1);await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt()}
 
 function openMR(e){e.preventDefault();if(!ct||!ct.stops||!ct.stops.length){alert('尚未新增地點');return}
-const s=ct.stops;if(s.length===1){window.open(s[0].map_url||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s[0].name)}`,'_blank');return}
+const s=ct.stops;if(s.length===1){window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s[0].name)}`,'_blank');return}
 const o=encodeURIComponent(s[0].name),d=encodeURIComponent(s[s.length-1].name),wp=s.slice(1,-1).map(x=>encodeURIComponent(x.name)).join('|');
 let u=`https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`;if(wp)u+=`&waypoints=${wp}`;u+='&travelmode=transit';window.open(u,'_blank')}
 
@@ -209,7 +208,7 @@ else if(m.type==='pdf'||m.type==='gdrive')el.innerHTML=`<iframe src="${m.url}" s
 else el.innerHTML=`<a href="${m.url}" target="_blank" style="font-size:13px;color:var(--blue);word-break:break-all">📎 ${c.label||m.url}</a>`}
 async function dlCr(i){let c=[...(ct.creds||[])];c.splice(i,1);await sb.from('trips').update({creds:c}).eq('id',ct.id);ct.creds=c;rCr()}
 
-async function lFl(){const{data}=await sb.from('flights').select('*').eq('date',cd).order('sort_order');rFl(data||[])}
+async function lFl(){const{data}=await sb.from('flights').select('*').eq('date',cd).order('dep_time');rFl(data||[])}
 function rFl(fl){const el=document.getElementById('fArea');if(!fl.length){el.innerHTML=`<button class="afb" onclick="openFlM()">＋ 新增航班</button>`;return}
 el.innerHTML=fl.map(f=>`<div class="fc"><div class="fh"><span class="fp">${f.person||''}</span><span class="fd">${f.direction||'去程'}</span><div class="fa"><button onclick="edFl(${f.id})">✏️</button><button onclick="dlFl(${f.id})">🗑️</button></div></div><div class="fr"><div class="fpt"><div class="pc mono">${f.dep_airport||'???'}</div><div class="pd">${f.dep_terminal?'T'+f.dep_terminal:''}</div><div class="ptm mono">${f.dep_time||'--:--'}</div></div><div class="fm"><div class="fi">${f.airline||''} ${f.flight_no||''}</div><div class="fl"></div></div><div class="fpt"><div class="pc mono">${f.arr_airport||'???'}</div><div class="pd">${f.arr_terminal?'T'+f.arr_terminal:''}</div><div class="ptm mono">${f.arr_time||'--:--'}</div></div></div></div>`).join('')+`<button class="afb" onclick="openFlM()">＋ 新增航班</button>`}
 async function dlFl(id){if(!confirm('刪除此航班？'))return;await sb.from('flights').delete().eq('id',id);lFl()}
@@ -278,7 +277,7 @@ openMoCtr(`<h3 style="font-size:15px">⏰ 設定時間</h3>
 setTimeout(()=>{const el=document.getElementById('xqTime');if(el)el.focus()},200)}
 async function saveQuickTime(idx){const t=document.getElementById('xqTime').value;let s=[...(ct.stops||[])];s[idx].time=t;
 s.sort((a,b)=>{if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time)});
-lastMovedIdx=null;await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
+await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;rSt();clM()}
 
 function openTripM(){const idx=D.findIndex(d=>d.d===cd);const t=ct||{};
 openMo(`<h3>${ct?'編輯行程':'新增行程'}</h3><div class="mf"><label>城市</label><input id="xtC" value="${t.city||D[idx].c}"></div><div class="mf"><label>目的地</label><input id="xtD" value="${t.dest||''}" placeholder="例：淺草、上野"></div><div class="mf"><label>行程描述</label><textarea id="xtI" placeholder="今天的安排">${t.itin||''}</textarea></div><div class="mf"><label>住宿</label><input id="xtH" value="${t.hotel||''}"></div><div class="mf"><label>備註</label><textarea id="xtN">${t.notes||''}</textarea></div><div class="ma"><button class="mca" onclick="clM()">取消</button><button class="mok" onclick="svTrip()">儲存</button></div>`)}
@@ -325,7 +324,7 @@ async function lCd(){loadCustomAreas();const{data}=await sb.from('candidates').s
 function rCd(){const el=document.getElementById('cdList');if(!cdAll.length){el.innerHTML='<div class="emp">尚未新增候選地點</div>';return}
 const grouped={};cdAll.forEach(c=>{const a=c.area||'未分區';if(!grouped[a])grouped[a]=[];grouped[a].push(c)});
 let h='';for(const[area,items]of Object.entries(grouped)){h+=`<div class="pkh">📍 ${area}（${items.length}）</div>`;
-h+=items.map(c=>{const mu=c.map_url||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.name)}`;
+h+=items.map(c=>{const mu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.name)}`;
 return`<div class="li" style="gap:5px"><a href="${mu}" target="_blank" style="flex:1;min-width:0;font-size:13px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:3px;overflow:hidden"><span style="font-size:11px;flex-shrink:0">📍</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span></a><button onclick="editCdArea(${c.id})" style="font-size:10px;color:var(--text3);background:var(--bg2);padding:2px 6px;border-radius:8px;flex-shrink:0;border:none;cursor:pointer;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.area||'選區域'}">${c.area||'📍'}</button><button onclick="assignCd(${c.id},'${c.name.replace(/'/g,"\\'")}')" style="font-size:10px;padding:3px 6px;border-radius:6px;border:.5px solid var(--green);background:var(--green-bg);color:var(--green-dk);cursor:pointer;flex-shrink:0;white-space:nowrap">排入→</button><button class="ld" onclick="dlCd(${c.id})" style="flex-shrink:0">✕</button></div>`}).join('')}
 el.innerHTML=h}
 async function aCd(){const nm=document.getElementById('cdNm').value.trim();if(!nm)return;
@@ -339,8 +338,8 @@ function assignCd(id,name){const dateHtml=D.map(d=>`<span style="padding:8px 14p
 openMoCtr(`<h3 style="font-size:15px">將「${name}」排入哪一天？</h3><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${dateHtml}</div>`)}
 async function doAssign(cdId,date){const cd2=cdAll.find(c=>c.id===cdId);if(!cd2)return;
 const{data:trips}=await sb.from('trips').select('*').eq('date',date);
-if(!trips||!trips.length){const idx=D.findIndex(d=>d.d===date);await sb.from('trips').insert({date,day:`第${idx+1}天`,city:D[idx].c,dest:'',itin:'',hotel:'',notes:'',stops:[{time:'',name:cd2.name,desc:'',note:'',map_url:cd2.map_url||''}],creds:[],sort_order:idx})}
-else{const trip=trips[0];let stops=[...(trip.stops||[])];stops.push({time:'',name:cd2.name,desc:'',note:'',map_url:cd2.map_url||''});await sb.from('trips').update({stops}).eq('id',trip.id)}
+if(!trips||!trips.length){const idx=D.findIndex(d=>d.d===date);await sb.from('trips').insert({date,day:`第${idx+1}天`,city:D[idx].c,dest:'',itin:'',hotel:'',notes:'',stops:[{time:'',name:cd2.name,desc:'',note:''}],creds:[],sort_order:idx})}
+else{const trip=trips[0];let stops=[...(trip.stops||[])];stops.push({time:'',name:cd2.name,desc:'',note:''});await sb.from('trips').update({stops}).eq('id',trip.id)}
 await sb.from('candidates').delete().eq('id',cdId);lCd();if(date===cd)lTrip();clM()}
 
 // Wishlist (stored in settings as JSON)
@@ -368,22 +367,6 @@ function openMoCtr(h){document.getElementById('mCt').innerHTML=h;const ov=docume
 
 // Map
 let tripMap=null,mapMarkers=[],mapLine=null;
-function parseGMapsCoords(url){if(!url)return null;
-let m=url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);if(m)return{lat:parseFloat(m[1]),lng:parseFloat(m[2])};
-m=url.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);if(m)return{lat:parseFloat(m[1]),lng:parseFloat(m[2])};
-m=url.match(/place\/[^\/]+\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);if(m)return{lat:parseFloat(m[1]),lng:parseFloat(m[2])};
-return null}
-
-async function geocodeStop(idx,name,mapUrl){
-const q=mapUrl&&!mapUrl.startsWith('http')?mapUrl:name+' 東京';
-try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);const d=await r.json();
-if(d&&d.length){let s=[...(ct.stops||[])];s[idx].lat=parseFloat(d[0].lat);s[idx].lng=parseFloat(d[0].lon);
-await sb.from('trips').update({stops:s}).eq('id',ct.id);ct.stops=s;renderMap()}}catch(e){}}
-
-async function renderMap(){
-const stops=ct?[...(ct.stops||[])]:[];
-const tripId=ct?ct.id:null;
-if(!stops.length){document.getElementById('mapBox').style.display='none';return}
 function extractAddr(s){if(!s)return[];
 s=s.replace(/[−–—]/g,'-');
 const parts=s.split(/[,，、\s]+/).map(p=>p.trim()).filter(Boolean);
@@ -395,10 +378,14 @@ if(useful.length>=3)results.push(useful.slice(0,3).join(' '));
 if(useful.length>=2)results.push(useful.slice(0,2).join(' '));
 if(useful.length>=1)results.push(useful[0]);
 return results}
-
 async function geoQuery(q){
 try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=jp`);
 const d=await r.json();if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}}catch(e){}return null}
+
+async function renderMap(){
+const stops=ct?[...(ct.stops||[])]:[];
+const tripId=ct?ct.id:null;
+if(!stops.length){document.getElementById('mapBox').style.display='none';return}
 
 let needGeo=false;
 for(let i=0;i<stops.length;i++){
